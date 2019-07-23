@@ -3,6 +3,7 @@ package me.best3.auto.graph.index;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -13,26 +14,26 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.IndexNotFoundException;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
-import org.apache.lucene.queryparser.classic.ParseException;
-import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
 import org.apache.lucene.search.SearcherFactory;
 import org.apache.lucene.search.SearcherManager;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.WildcardQuery;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+
 
 public class LuceneIndexManager {
 	private static final Logger logger = LogManager.getLogger(LuceneIndexManager.class);
 	
 	public class LuceneIndex{
 		private static final int READER_REFRESH_TIME = 400;
-		private static final String VALUE = "value";
-		private static final String KEY = "key";
 		// Path where the index directory resides
 		private String indexLocation;
 		private final StandardAnalyzer standardAnalyzer = new StandardAnalyzer();
@@ -95,30 +96,80 @@ public class LuceneIndexManager {
 		public void write(String key, String value) throws IOException {
 			logger.debug("write method called");
 			Document doc = new Document();
-			doc.add(new Field(KEY, key, TextField.TYPE_STORED));
-			doc.add(new Field(VALUE, value, TextField.TYPE_STORED));
+			doc.add(new Field(key, value, TextField.TYPE_STORED));
 			this.indexWriter.addDocument(doc);
 			this.indexWriter.commit();
 		}
 		
 		public String read(String key) throws IOException {
-			logger.debug("read method called");
-			QueryParser queryParser = new QueryParser(KEY, standardAnalyzer);
-			IndexSearcher searcher = this.searchManager.acquire();
-			try {
-				Query query = queryParser.parse(key);
-				TopDocs docs = searcher.search(query, 1);
-				if (docs.totalHits.value > 0) {
-					return searcher.doc(docs.scoreDocs[0].doc).get(VALUE);
+			if (logger.isDebugEnabled()) {
+				logger.debug("read method called");
+			}
+			Optional<SearchResult> searchReasult = findFirst(key);
+			if(searchReasult.isPresent()) {
+				if (logger.isDebugEnabled()) {
+					logger.debug(String.format("Read method found search result for %s", key));
 				}
-			} catch (ParseException e) {
-				e.printStackTrace();
-			}finally {
-				this.searchManager.release(searcher);
+				return searchReasult.get().getDocument().get(key);
+			}
+			if (logger.isDebugEnabled()) {
+				logger.debug(String.format("Read method did NOT find any result for %s", key));
 			}
 			return null;
 		}
 		
+		public Optional<SearchResult> findFirst(String key) throws IOException {
+			if (logger.isDebugEnabled()) {
+				logger.debug("findFirst method called");
+			}
+			if(null==key) {
+				throw new IOException("key cannot be null.");
+			}
+			
+			//Query parser is not thread safe
+			IndexSearcher searcher = this.searchManager.acquire();
+			try {
+				WildcardQuery query = new WildcardQuery(new Term(key,"*"));
+				TopDocs docs = searcher.search(query, 1);
+				if (docs.totalHits.value > 0) {
+					return  Optional.of(new SearchResult(searcher, docs.scoreDocs[0].doc));
+				}
+			}finally {
+				this.searchManager.release(searcher);
+			}
+			return Optional.empty();
+		}
+		
+		public boolean update(String key, String value) throws IOException {
+			TermQuery query = new TermQuery(new Term(key));
+			this.indexWriter.deleteDocuments(query);
+			write(key,value);
+			return true;
+		}
+		
+		public void debugDumpIndex() throws IOException {
+			if(!logger.isDebugEnabled()) {
+				return;
+			}
+			this.searchManager.maybeRefresh();
+			IndexSearcher searcher = this.searchManager.acquire(); 
+			try {
+				IndexReader reader = searcher.getIndexReader();
+				for(int i=0;i<reader.maxDoc();i++) {
+					Document doc = reader.document(i);
+					logger.debug(String.format("===========%d============",i));
+					doc.getFields().stream().forEach(f ->{
+						logger.debug(String.format("%s : %s", f.name(),f.stringValue()));
+					});
+					logger.debug("========================");
+				}
+				
+			} catch(Exception e) {
+				e.printStackTrace();
+			}finally {
+				this.searchManager.release(searcher);
+			}
+		}
 	}
 	
 	private static volatile LuceneIndex luceneIndex = null;

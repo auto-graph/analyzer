@@ -1,6 +1,7 @@
 package me.best3.auto.graph.index;
 
 import java.io.IOException;
+import java.util.Date;
 
 import junit.framework.TestCase;
 import me.best3.auto.graph.index.LuceneIndexManager.LuceneIndex;
@@ -24,7 +25,8 @@ public class LuceneIndexManagerTest extends TestCase {
 
 	public void testWrite() {
 		try {
-			this.index.write("Test", "Test value");
+			this.index.write("Test", "Test value " + new Date());
+			this.index.debugDumpIndex();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -33,7 +35,11 @@ public class LuceneIndexManagerTest extends TestCase {
 
 	public void read() {
 		try {
-			assertEquals("Read operation working", "Test value",this.index.read("Test"));
+			String value = this.index.read("Test");
+			assertNotNull("Read value is null ", value);
+			if(value!=null) {
+				assertTrue("Read operation working", value.startsWith("Test value"));
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
