@@ -1,6 +1,9 @@
 /.classpath
 /.project
 /.settings
-/index
+/kvindex
 /analyzer.zargo~
 /target/*
+/target/
+
+/target/

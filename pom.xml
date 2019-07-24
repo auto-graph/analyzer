@@ -14,15 +14,17 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<lucene.version>8.1.1</lucene.version>
+		<junit.version>5.5.1</junit.version>
 	</properties>
 
 	<dependencies>
 		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>3.8.1</version>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-engine</artifactId>
+			<version>${junit.version}</version>
 			<scope>test</scope>
 		</dependency>
+
 		<!-- apache lucene -->
 		<dependency>
 			<groupId>org.apache.lucene</groupId>
@@ -69,6 +71,7 @@
 				<version>3.0.0-M3</version>
 				<configuration>
 					<argLine>-Xmx1024m -XX:MaxPermSize=256m --enable-preview</argLine>
+					<workingDirectory>${project.build.directory}</workingDirectory>
 				</configuration>
 			</plugin>
 		</plugins>
