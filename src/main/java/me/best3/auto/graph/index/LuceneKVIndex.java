@@ -28,24 +28,16 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
 public class LuceneKVIndex extends LuceneIndex{
-	private static final String KVINDEX = "./kvindex";
 	private static final Logger logger = LogManager.getLogger(LuceneKVIndex.class);
-	private static final String INDEX_LOCATION = "me.best3.auto.graph.index.LuceneIndexManager.LuceneKVIndex";
+	
+	private static final String KVINDEX = "./kvindex";
+	private static final String INDEX_LOCATION = "me.best3.auto.graph.index.LuceneKVIndex";
 	private static final int READER_REFRESH_TIME = 400;
 	
 	LuceneKVIndex() throws IOException {
 		super();
 	}
 	
-	@Override
-	public void write(String key, String value) throws IOException {
-		logger.debug("write method called");
-		Document doc = new Document();
-		doc.add(new Field(key, value, TextField.TYPE_STORED));
-		IndexWriter indexWriter = getIndexWriter();
-		indexWriter.addDocument(doc);
-		indexWriter.commit();
-	}
 	
 	public String read(String key) throws IOException {
 		if (logger.isDebugEnabled()) {
@@ -120,30 +112,6 @@ public class LuceneKVIndex extends LuceneIndex{
 		}
 	}
 	
-	public void debugDumpIndex() throws IOException {
-		if(!logger.isDebugEnabled()) {
-			return;
-		}
-		getSearchManager().maybeRefresh();
-		IndexSearcher searcher = getSearchManager().acquire(); 
-		try {
-			IndexReader reader = searcher.getIndexReader();
-			for(int i=0;i<reader.maxDoc();i++) {
-				Document doc = reader.document(i);
-				logger.debug(String.format("===========%d============",i));
-				doc.getFields().stream().forEach(f ->{
-					logger.debug(String.format("%s : %s", f.name(),f.stringValue()));
-				});
-				logger.debug("========================");
-			}
-			
-		} catch(Exception e) {
-			e.printStackTrace();
-		}finally {
-			getSearchManager().release(searcher);
-		}
-	}
-
 	@Override
 	public String getIndexLocation() {
 		return System.getProperty(INDEX_LOCATION, KVINDEX);

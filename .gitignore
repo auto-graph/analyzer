@@ -2,6 +2,7 @@
 /.project
 /.settings
 /kvindex
+/docindex
 /analyzer.zargo~
 /target/*
 /target/

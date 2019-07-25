@@ -9,16 +9,21 @@ import java.util.TimerTask;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.IndexNotFoundException;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
+import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.SearcherFactory;
 import org.apache.lucene.search.SearcherManager;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
-public abstract class LuceneIndex {
+public abstract class LuceneIndex implements AutoCloseable{
 	
 	private static final Logger logger = LogManager.getLogger(LuceneIndex.class);
 	// Path where the index directory resides
@@ -84,7 +89,15 @@ public abstract class LuceneIndex {
 		this.indexWriter = new IndexWriter(directory, indexWriterConfig);
 	}
 	
-	public abstract void write(String key, String value) throws IOException;
+	public void write(String key, String value) throws IOException {
+		logger.debug("write method called");
+		Document doc = new Document();
+		doc.add(new Field(key, value, TextField.TYPE_STORED));
+		IndexWriter indexWriter = getIndexWriter();
+		indexWriter.addDocument(doc);
+		indexWriter.commit();
+	}
+	
 	public abstract String getIndexLocation();
 	protected abstract long getReaderRefreshTime();
 
@@ -97,12 +110,48 @@ public abstract class LuceneIndex {
 	}
 
 	public IndexWriter getIndexWriter() {
-		return indexWriter;
+		return this.indexWriter;
 	}
 
 	public SearcherManager getSearchManager() {
 		return searchManager;
 	}
+
+	@Override
+	public void close() throws Exception {
+		if(this.indexWriter!=null) {
+			this.indexWriter.close();
+		}
+		if(this.searchManager!=null) {
+			this.searchManager.close();
+		}
+		if(this.directory!=null) {
+			this.directory.close();
+		}
+	}
 	
+	public void debugDumpIndex() throws IOException {
+		if(!logger.isDebugEnabled()) {
+			return;
+		}
+		getSearchManager().maybeRefresh();
+		IndexSearcher searcher = getSearchManager().acquire(); 
+		try {
+			IndexReader reader = searcher.getIndexReader();
+			for(int i=0;i<reader.maxDoc();i++) {
+				Document doc = reader.document(i);
+				logger.debug(String.format("===========%d============",i));
+				doc.getFields().stream().forEach(f ->{
+					logger.debug(String.format("%s : %s", f.name(),f.stringValue()));
+				});
+				logger.debug("========================");
+			}
+			
+		} catch(Exception e) {
+			e.printStackTrace();
+		}finally {
+			getSearchManager().release(searcher);
+		}
+	}
 
 }
