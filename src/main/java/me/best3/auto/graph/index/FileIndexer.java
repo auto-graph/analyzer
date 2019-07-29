@@ -45,7 +45,9 @@ public class FileIndexer {
 
 	private void logCurrentToken(String caller, JsonParser jsonParser) {
 		try {
-			logger.debug(String.format("%s => %s %s %s", caller, jsonParser.currentToken(), jsonParser.currentName(), jsonParser.getValueAsString()));
+			if(logger.isDebugEnabled()) {
+				logger.debug(String.format("%s => %s %s %s", caller, jsonParser.currentToken(), jsonParser.currentName(), jsonParser.getValueAsString()));
+			}
 		} catch (IOException e) {
 			logger.error(e,e);
 		}
@@ -111,7 +113,7 @@ public class FileIndexer {
 	private void processField(JsonParser jsonParser, Document document) {
 		logCurrentToken("processField",jsonParser);
 		try {
-			document.addString(jsonParser.currentName(), "");
+			document.addString(jsonParser.currentName(), jsonParser.currentName());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -132,6 +134,13 @@ public class FileIndexer {
 	
 	void dumpIndex() {
 		this.localFSIndexer.dumpIndex();
+	}
+	
+	public void clear() {
+		if(logger.isDebugEnabled()) {
+			logger.debug(String.format("Deleting docs from %s", this.localFSIndexer.getIndexInformation()));
+		}
+		this.localFSIndexer.clear();
 	}
 
 }

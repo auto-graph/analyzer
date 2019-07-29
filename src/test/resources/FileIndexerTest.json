@@ -1,16 +1,16 @@
 [
 
     {
-        "field1": "test value",
-        "field2": "test value 2"
+        "fieldOne": "test value",
+        "fieldTwo": "test value 2"
     },
     {
-        "field1": "test value",
-        "field2": "test value 2"
+        "fieldOne": "test value",
+        "fieldTwo": "test value 2"
     },
     {
-        "field1": "test value",
-        "field2": "test value 2"
+        "fieldOne": "test value",
+        "fieldTwo": "test value 2"
     },
     "value1",
     "value2"

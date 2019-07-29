@@ -9,8 +9,9 @@ public class FileIndexerTest {
 	private static final String FILE_INDEXER_TEST_JSON = "FileIndexerTest.json";
 
 	@Test
-	public void processTokens() throws IOException {
+	public void processTokens() throws IOException, InterruptedException {
 		FileIndexer fileIndexer = new FileIndexer();
+		fileIndexer.clear();
 		String testJsonFile = FileIndexerTest.class.getClassLoader().getResource(FILE_INDEXER_TEST_JSON).getFile();
 		fileIndexer.processJSONFile(testJsonFile);
 		fileIndexer.dumpIndex();
