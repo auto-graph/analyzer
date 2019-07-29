@@ -9,5 +9,23 @@
     <Root level="DEBUG">
       <AppenderRef ref="Console"/>
     </Root>
+    <Logger name="me.best3.auto.graph.index.LuceneIndexFactory" level="INFO">
+    	<AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="me.best3.auto.graph.index.FileIndexer" level="INFO">
+    	<AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="me.best3.auto.graph.index.LuceneIndex" level="INFO">
+    	<AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="me.best3.auto.graph.index.LuceneDocumentIndex" level="INFO">
+    	<AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="me.best3.auto.graph.index.Document" level="INFO">
+    	<AppenderRef ref="Console"/>
+    </Logger>
+     <Logger name="me.best3.auto.graph.index.LuceneKVIndex" level="INFO">
+    	<AppenderRef ref="Console"/>
+    </Logger>
   </Loggers>
 </Configuration>

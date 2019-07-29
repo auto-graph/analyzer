@@ -6,19 +6,23 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.search.IndexSearcher;
 
 public class SearchResult {
-	private IndexSearcher searcher;
 	private int docId;
+	private Document document;
 	
 	public SearchResult() {}
 
-	public SearchResult(IndexSearcher searcher, int docId) {
+	public SearchResult(IndexSearcher searcher, int docId) throws IOException {
 		super();
-		this.searcher = searcher;
 		this.docId = docId;
+		this.document = searcher.doc(this.docId);
 	}
 	
 	public Document getDocument() throws IOException {
-		return this.searcher.doc(this.docId);
+		return this.document;
+	}
+
+	public int getDocId() {
+		return docId;
 	}
 
 }

@@ -77,8 +77,9 @@ public abstract class LuceneIndex implements AutoCloseable{
 	}
 
 	private SearcherManager createReader() throws IOException {
+		IndexWriter indexWriterRef = this.getIndexWriter();
 		try {
-			return new SearcherManager(this.getIndexWriter(), new SearcherFactory());
+			return new SearcherManager(indexWriterRef, new SearcherFactory());
 		} catch (IndexNotFoundException e) {
 			if(logger.isDebugEnabled()) {
 				logger.warn(e,e);
@@ -86,7 +87,7 @@ public abstract class LuceneIndex implements AutoCloseable{
 			write("00001","00001");//without this write searcher fails to find index on brand new instances of index
 			this.indexWriter.deleteAll();
 			this.indexWriter.commit();
-			return new SearcherManager(this.getIndexWriter(), new SearcherFactory());
+			return new SearcherManager(indexWriterRef, new SearcherFactory());
 		}
 	}
 
