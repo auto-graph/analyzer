@@ -26,4 +26,12 @@ public class LocalFileSystemIndexer {
 			logger.error(e,e);
 		}
 	}
+
+	public void clear() {
+		this.documentIndex.clear();
+	}
+
+	public String getIndexInformation() {
+		return this.documentIndex.getIndexLocation();
+	}
 }
