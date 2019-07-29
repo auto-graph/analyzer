@@ -65,7 +65,7 @@ public class LuceneKVIndex extends LuceneIndex{
 		}
 		
 		//Query parser is not thread safe
-		IndexSearcher searcher = getSearchManager().acquire();
+		IndexSearcher searcher = getSearcherManager().acquire();
 		try {
 			WildcardQuery query = new WildcardQuery(new Term(key,"*"));
 			TopDocs docs = searcher.search(query, 1);
@@ -73,7 +73,7 @@ public class LuceneKVIndex extends LuceneIndex{
 				return  Optional.of(new SearchResult(searcher, docs.scoreDocs[0].doc));
 			}
 		}finally {
-			getSearchManager().release(searcher);
+			getSearcherManager().release(searcher);
 		}
 		return Optional.empty();
 	}
@@ -93,11 +93,11 @@ public class LuceneKVIndex extends LuceneIndex{
 	}
 	
 	public long getDocCount() throws IOException {
-		IndexSearcher searcher = getSearchManager().acquire();
+		IndexSearcher searcher = getSearcherManager().acquire();
 		try{
 			return searcher.getIndexReader().numDocs();
 		}finally {
-			getSearchManager().release(searcher);
+			getSearcherManager().release(searcher);
 		}
 	}
 	
@@ -106,7 +106,7 @@ public class LuceneKVIndex extends LuceneIndex{
 			logger.debug("Manual reader refresh.");
 		}
 		try {
-			getSearchManager().maybeRefresh();
+			getSearcherManager().maybeRefresh();
 		} catch (IOException e) {
 			logger.warn(e, e);
 		}
