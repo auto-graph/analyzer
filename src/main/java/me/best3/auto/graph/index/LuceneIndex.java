@@ -61,10 +61,12 @@ public abstract class LuceneIndex implements AutoCloseable{
 			@Override
 			public void run() {
 				try {
+					if (logger.isDebugEnabled()) {
+						logger.debug("Timer attempting refresh");
+					}
 					getIndexWriter().flush();
 					getIndexWriter().commit();
 					searcherManager.maybeRefresh();
-					logger.debug("Timer attempting refresh");
 				} catch (IOException e) {
 					logger.debug(e,e);
 				}

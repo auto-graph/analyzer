@@ -26,9 +26,12 @@ public class LuceneIndexFactory {
 		return LuceneIndexFactory.luceneKVIndex;
 	}
 	
-	public LuceneDocumentIndex getLuceneIndex() throws IOException {
-		if(logger.isDebugEnabled()) {
+	public LuceneDocumentIndex getLuceneDocumentIndex() throws IOException {
+		long startTime=0;
+		boolean debugEnabled = logger.isDebugEnabled();
+		if(debugEnabled) {
 			logger.debug("get index");
+			startTime = System.currentTimeMillis();
 		}
 		if (LuceneIndexFactory.luceneDocumentIndex == null) {
 			synchronized (this) {
@@ -36,6 +39,11 @@ public class LuceneIndexFactory {
 					LuceneIndexFactory.luceneDocumentIndex = new LuceneDocumentIndex();
 				}
 			}
+		}
+		long endTime;
+		if(debugEnabled) {
+			endTime = System.currentTimeMillis();
+			logger.debug(String.format("Time to return document index singleton instance is %d",(endTime-startTime)));
 		}
 		return LuceneIndexFactory.luceneDocumentIndex;
 	}

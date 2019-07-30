@@ -45,23 +45,41 @@ public class LuceneDocumentIndex extends LuceneIndex {
 		}
 	}
 	
-	public Document findFirst(Document document) throws IOException {
+	public Document findFirst(Document match) throws IOException {
+		if(logger.isDebugEnabled()) {
+			logger.debug("find first using document : " + match);
+		}
+		TopDocs topDocs = search(match);
+		if(logger.isDebugEnabled()) {
+			logger.debug("topDocs count : " + topDocs.totalHits.value);
+		}
+		if(topDocs.totalHits.value>0) {
+			return getDocument(topDocs.scoreDocs[0].doc);
+		}
+		return null;
+	}
+
+	private Document getDocument(int docID) throws IOException {
 		SearcherManager searcherManager = getSearcherManager();
 		IndexSearcher searcher = searcherManager.acquire();
 		try {
-			Query query = document.getAllFieldsMatchQuery();
+			return new Document(searcher.doc(docID));
+		}finally {
+			searcherManager.release(searcher);
+		}
+	}
+	
+	private final TopDocs search(Document match) throws IOException {
+		SearcherManager searcherManager = getSearcherManager();
+		IndexSearcher searcher = searcherManager.acquire();
+		try {
+			Query query = match.getAllFieldsMatchQuery();
 			
 			if(logger.isDebugEnabled()) {
-				logger.debug("find first using query : " + query.toString());
+				logger.debug("searching using query : " + query.toString());
 			}
 			if(query!=null) {
-				TopDocs topDocs = searcher.search(query, 1);
-				if(logger.isDebugEnabled()) {
-					logger.debug("topDocs count : " + topDocs.totalHits.value);
-				}
-				if(topDocs.totalHits.value>0) {
-					return new Document(searcher.getIndexReader().document(topDocs.scoreDocs[0].doc));
-				}
+				return searcher.search(query, 1);				
 			}
 		}finally {
 			searcherManager.release(searcher);
@@ -77,6 +95,10 @@ public class LuceneDocumentIndex extends LuceneIndex {
 			return false;
 		}
 		
+	}
+
+	public long count(Document match) throws IOException {		
+		return search(match).totalHits.value;
 	}
 
 }
