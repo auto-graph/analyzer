@@ -40,8 +40,6 @@ public class LuceneDocumentIndex extends LuceneIndex {
 				logger.debug("Doc dosent exist attempting write.");
 			}
 			getIndexWriter().addDocument(document.getDocument());
-//			getIndexWriter().flush();
-//			getIndexWriter().commit();
 		}
 	}
 	
@@ -100,5 +98,6 @@ public class LuceneDocumentIndex extends LuceneIndex {
 	public long count(Document match) throws IOException {		
 		return search(match).totalHits.value;
 	}
+
 
 }

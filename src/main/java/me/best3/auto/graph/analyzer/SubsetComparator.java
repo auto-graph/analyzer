@@ -5,12 +5,12 @@ import java.util.Comparator;
 
 import me.best3.auto.graph.index.Document;
 
-public class SubsetComparitor implements Comparator<Document> {
+public class SubsetComparator implements Comparator<Document> {
 
 	@Override
 	public int compare(Document docA, Document docB) {
-		String[] docAFields = (String[])docA.getFields().toArray();
-		String[] docBFields = (String[])docB.getFields().toArray();
+		String[] docAFields = docA.getFields().toArray(new String[0]);
+		String[] docBFields = docB.getFields().toArray(new String[0]);
 //		int smallerArrayLength = Math.min(docAFields.length, docBFields.length);
 		/*
 		 * Finds and returns the index of the first mismatch between two Object arrays, 

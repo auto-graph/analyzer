@@ -2,6 +2,9 @@ package me.best3.auto.graph.index;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -11,6 +14,8 @@ import org.apache.logging.log4j.Logger;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+
+import me.best3.auto.graph.analyzer.SubsetComparator;
 
 /**
  * Nested documents are flattened out
@@ -164,6 +169,13 @@ public class FileIndexer implements AutoCloseable{
 		if(this.localFSIndexer!=null) {
 			this.localFSIndexer.close();
 		}
+	}
+
+	
+	public List<Document> getDocuments(Comparator<Document> comparator) throws IOException {
+		List<Document> documents = localFSIndexer.getAllDocs();
+		Collections.sort(documents, comparator);
+		return documents;
 	}
 
 }

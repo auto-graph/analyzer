@@ -1,6 +1,7 @@
 package me.best3.auto.graph.index;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -45,5 +46,10 @@ public class LocalFileSystemIndexer implements AutoCloseable{
 
 	public long count(Document match) throws IOException {
 		return documentIndex.count(match);
+	}
+
+	
+	public List<Document> getAllDocs() throws IOException {
+		return documentIndex.getAllDocs();
 	}
 }

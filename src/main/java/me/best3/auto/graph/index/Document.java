@@ -1,5 +1,6 @@
 package me.best3.auto.graph.index;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -17,6 +18,8 @@ import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Document implements Iterable<IndexableField> {
 	public static final Logger logger = LogManager.getLogger(Document.class);
@@ -82,5 +85,9 @@ public class Document implements Iterable<IndexableField> {
 	}
 	org.apache.lucene.document.Document getDocument(){
 		return this.document;
+	}
+	
+	public String toJSON() throws IOException {
+		return new ObjectMapper().writeValueAsString(document);
 	}
 }

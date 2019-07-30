@@ -3,6 +3,8 @@ package me.best3.auto.graph.index;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -25,6 +27,7 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.SearcherFactory;
 import org.apache.lucene.search.SearcherManager;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.store.AlreadyClosedException;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.NIOFSDirectory;
 
@@ -67,7 +70,8 @@ public abstract class LuceneIndex implements AutoCloseable{
 					getIndexWriter().flush();
 					getIndexWriter().commit();
 					searcherManager.maybeRefresh();
-				} catch (IOException e) {
+				}catch(	AlreadyClosedException |
+						IOException e) {
 					logger.debug(e,e);
 				}
 				
@@ -175,14 +179,14 @@ public abstract class LuceneIndex implements AutoCloseable{
 			
 //			getUpToMaxDocs(reader);
 			StandardQueryParser queryParser = new StandardQueryParser();
-			Query query = queryParser.parse("+fieldOne:fieldOne +fieldTwo:fieldTwo", "");
+			Query query = queryParser.parse("*:*", "");
 			
 			int numHits = 100;
 			TopDocs topDocs = searcher.search(query, numHits);
 			logger.debug(String.format("total hists %s score docs : %s", topDocs.totalHits,topDocs.scoreDocs.length));
 			do {
 				for(ScoreDoc scoreDoc : topDocs.scoreDocs) {
-					dumpDoc(searcher.doc(scoreDoc.doc));
+					new me.best3.auto.graph.index.Document(searcher.doc(scoreDoc.doc)).toJSON();
 				}
 				if(topDocs.scoreDocs.length>0) {
 					topDocs = searcher.searchAfter(topDocs.scoreDocs[topDocs.scoreDocs.length-1], query, numHits);
@@ -195,20 +199,14 @@ public abstract class LuceneIndex implements AutoCloseable{
 		}
 	}
 
-	private void getUpToMaxDocs(IndexReader reader) throws IOException {
+	private List<me.best3.auto.graph.index.Document> getUpToMaxDocs(IndexReader reader) throws IOException {
+		List<me.best3.auto.graph.index.Document> documents = new ArrayList<me.best3.auto.graph.index.Document>();
 		for(int i=0;i<reader.maxDoc();i++) {
 			Document doc = reader.document(i);
-			dumpDoc(doc);
+			documents.add(new me.best3.auto.graph.index.Document(doc));
 		}
-	}
-
-	private void dumpDoc(Document doc) throws IOException {
-		logger.debug("========================");
-		doc.getFields().stream().forEach(f ->{
-			logger.debug(String.format("%s : %s", f.name(),f.stringValue()));
-		});
-		logger.debug("========================");
-	}
+		return documents;
+	}	
 
 	public void clear() {
 		try {
@@ -219,6 +217,18 @@ public abstract class LuceneIndex implements AutoCloseable{
 			logger.debug(e,e);
 		}
 	}
+	
+	public List<me.best3.auto.graph.index.Document> getAllDocs() throws IOException {
+		SearcherManager searcherManager = getSearcherManager(); 
+		IndexSearcher searcher = searcherManager.acquire();
+		try {
+			return getUpToMaxDocs(searcher.getIndexReader());
+		}finally {
+			searcherManager.release(searcher);
+		}
+		
+	}
+	
 	/* Abstract methods*/
 	public abstract String getIndexLocation();
 	protected abstract long getReaderRefreshTime();
