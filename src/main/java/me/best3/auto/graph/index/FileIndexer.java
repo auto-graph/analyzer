@@ -16,18 +16,29 @@ import com.fasterxml.jackson.core.JsonToken;
  * Nested documents are flattened out
  *
  */
-public class FileIndexer {
+public class FileIndexer implements AutoCloseable{
 	private static final Logger logger = LogManager.getLogger(FileIndexer.class);
 	private LocalFileSystemIndexer localFSIndexer;
 	private JsonFactory jsonFactory = new JsonFactory();
 
 	public FileIndexer() throws IOException {
+		boolean isDebugEnabled = logger.isDebugEnabled();
+		long t1 = 0;
+		if(isDebugEnabled) {
+			t1 = System.currentTimeMillis();
+		}
+		
 		this.localFSIndexer = new LocalFileSystemIndexer();
+		
+		long t2 = 0;
+		if(isDebugEnabled) {
+			t2 = System.currentTimeMillis();
+			logger.debug(String.format("File Indexer time %d", (t2-t1)));
+		}
 	}
 
 	public void processJSONFile(String fileName) {
-		try {
-			JsonParser jsonParser = jsonFactory.createParser(new File(fileName));
+		try(JsonParser jsonParser = jsonFactory.createParser(new File(fileName))) {
 			processTockens(jsonParser);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -136,11 +147,23 @@ public class FileIndexer {
 		this.localFSIndexer.dumpIndex();
 	}
 	
+	public long count(Document match) throws IOException {
+		return localFSIndexer.count(match);
+	}
+	
 	public void clear() {
 		if(logger.isDebugEnabled()) {
 			logger.debug(String.format("Deleting docs from %s", this.localFSIndexer.getIndexInformation()));
 		}
 		this.localFSIndexer.clear();
+	}
+
+	
+	@Override
+	public void close() throws Exception{
+		if(this.localFSIndexer!=null) {
+			this.localFSIndexer.close();
+		}
 	}
 
 }
