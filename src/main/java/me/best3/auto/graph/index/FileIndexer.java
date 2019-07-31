@@ -2,7 +2,6 @@ package me.best3.auto.graph.index;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Supplier;
@@ -15,48 +14,29 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 
-import me.best3.auto.graph.analyzer.SubsetComparator;
-
 /**
  * Nested documents are flattened out
+ * This indexer is aware of processing a JSON file and delegating the work of indexing to concrete classes 
  *
  */
-public class FileIndexer implements AutoCloseable{
+public abstract class FileIndexer implements AutoCloseable{
 	private static final Logger logger = LogManager.getLogger(FileIndexer.class);
-	private LocalFileSystemIndexer localFSIndexer;
 	private JsonFactory jsonFactory = new JsonFactory();
 
-	public FileIndexer() throws IOException {
-		boolean isDebugEnabled = logger.isDebugEnabled();
-		long t1 = 0;
-		if(isDebugEnabled) {
-			t1 = System.currentTimeMillis();
-		}
-		
-		this.localFSIndexer = new LocalFileSystemIndexer();
-		
-		long t2 = 0;
-		if(isDebugEnabled) {
-			t2 = System.currentTimeMillis();
-			logger.debug(String.format("File Indexer time %d", (t2-t1)));
-		}
-	}
-
+	/**
+	 * Parses JSON and generates a token stream and processes all tokens
+	 * @param fileName
+	 */
 	public void processJSONFile(String fileName) {
 		try(JsonParser jsonParser = jsonFactory.createParser(new File(fileName))) {
-			processTockens(jsonParser);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	//logger.info(String.format("%s : %s : %s", jsonParser.currentToken(), jsonParser.currentName(), jsonParser.getCurrentValue()));
-	private void processTockens(JsonParser jsonParser) {
-		Stream.generate(getTokenSupplier(jsonParser))
+			Stream.generate(getTokenSupplier(jsonParser))
 			.takeWhile(t -> t != null)
 			//TDOD: Debug statement remove later
 			.peek(t -> logCurrentToken("processTockens",jsonParser))
-//			.forEach(t -> logCurrentToken("processTockens",jsonParser));
 			.forEach(t ->processToken(jsonParser));
+		} catch (IOException e) {
+			logger.debug(e,e);
+		}
 	}
 
 	private void logCurrentToken(String caller, JsonParser jsonParser) {
@@ -70,10 +50,10 @@ public class FileIndexer implements AutoCloseable{
 	}
 
 	/**
-	 * A valid JSON starts to be an object or an array
+	 * A valid JSON always starts with an object or an array
 	 * @throws IOException 
 	 * */
-	public void processToken(JsonParser jsonParser){
+	private void processToken(JsonParser jsonParser){
 		logCurrentToken("processToken",jsonParser);
 		switch(jsonParser.currentToken()) {
 		case START_ARRAY:
@@ -92,7 +72,7 @@ public class FileIndexer implements AutoCloseable{
 		}
 	}
 	
-	public void processToken(JsonParser jsonParser,Document document) {
+	private void processToken(JsonParser jsonParser,Document document) {
 		logCurrentToken("processTokenDoc",jsonParser);
 		switch(jsonParser.currentToken()) {
 		case START_OBJECT:
@@ -111,6 +91,11 @@ public class FileIndexer implements AutoCloseable{
 		}
 	}
 	
+	/**
+	 * Called at an array boundary, this method process that array in its entirety
+	 * 
+	 * @param jsonParser
+	 */
 	private void processArray(JsonParser jsonParser) {
 		logCurrentToken("processArray",jsonParser);
 		Stream.generate(getTokenSupplier(jsonParser))
@@ -118,14 +103,28 @@ public class FileIndexer implements AutoCloseable{
 		.forEach(t -> processToken(jsonParser));
 	}
 
+	/**
+	 * This is called at beginning of an object boundary and process that 
+	 * object in its entirety.
+	 * Creates a new instance of document and builds the document
+	 * 
+	 * @param jsonParser
+	 * @throws IOException
+	 */
 	private void processObject(JsonParser jsonParser) throws IOException {
 		Document document = new Document();
 		Stream.generate(getTokenSupplier(jsonParser))
 		.takeWhile(t -> (t != null && !t.equals(JsonToken.END_OBJECT)) )
 		.forEach(t -> processToken(jsonParser,document));
-		this.localFSIndexer.indexDocument(document);
+		this.indexDocument(document);
 	}
 
+	/**
+	 * Captures a fields name
+	 * 
+	 * @param jsonParser
+	 * @param document
+	 */
 	private void processField(JsonParser jsonParser, Document document) {
 		logCurrentToken("processField",jsonParser);
 		try {
@@ -148,34 +147,12 @@ public class FileIndexer implements AutoCloseable{
 		};
 	}
 	
-	void dumpIndex() {
-		this.localFSIndexer.dumpIndex();
-	}
 	
-	public long count(Document match) throws IOException {
-		return localFSIndexer.count(match);
-	}
-	
-	public void clear() {
-		if(logger.isDebugEnabled()) {
-			logger.debug(String.format("Deleting docs from %s", this.localFSIndexer.getIndexInformation()));
-		}
-		this.localFSIndexer.clear();
-	}
-
-	
+	//Abstract methods
+	public abstract void indexDocument(Document document) throws IOException;
+	public abstract List<Document> getDocuments(Comparator<Document> comparator) throws IOException;
+	public abstract void clear();
 	@Override
-	public void close() throws Exception{
-		if(this.localFSIndexer!=null) {
-			this.localFSIndexer.close();
-		}
-	}
-
-	
-	public List<Document> getDocuments(Comparator<Document> comparator) throws IOException {
-		List<Document> documents = localFSIndexer.getAllDocs();
-		Collections.sort(documents, comparator);
-		return documents;
-	}
+	public abstract void close() throws Exception;
 
 }

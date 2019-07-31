@@ -11,19 +11,11 @@ import org.apache.lucene.search.TopDocs;
 
 public class LuceneDocumentIndex extends LuceneIndex {
 	
-	public static final Logger logger = LogManager.getLogger(LuceneDocumentIndex.class);
-	
-	private static final String KVINDEX = "./docindex";
-	private static final String INDEX_LOCATION = "me.best3.auto.graph.index.LuceneJSONIndex";
+	private static final Logger logger = LogManager.getLogger(LuceneDocumentIndex.class);
 	private static final int READER_REFRESH_TIME = 400;
 
-	LuceneDocumentIndex() throws IOException {
-		super();
-	}
-
-	@Override
-	public String getIndexLocation() {
-		return System.getProperty(INDEX_LOCATION, KVINDEX);
+	LuceneDocumentIndex(String indexLocation) throws IOException {
+		super(indexLocation);
 	}
 
 	@Override
@@ -45,9 +37,9 @@ public class LuceneDocumentIndex extends LuceneIndex {
 	
 	public Document findFirst(Document match) throws IOException {
 		if(logger.isDebugEnabled()) {
-			logger.debug("find first using document : " + match);
+			logger.debug("find first using document : " + match.toJSON());
 		}
-		TopDocs topDocs = search(match);
+		TopDocs topDocs = search(match,1);
 		if(logger.isDebugEnabled()) {
 			logger.debug("topDocs count : " + topDocs.totalHits.value);
 		}
@@ -67,7 +59,7 @@ public class LuceneDocumentIndex extends LuceneIndex {
 		}
 	}
 	
-	private final TopDocs search(Document match) throws IOException {
+	private final TopDocs search(Document match, int topN) throws IOException {
 		SearcherManager searcherManager = getSearcherManager();
 		IndexSearcher searcher = searcherManager.acquire();
 		try {
@@ -87,16 +79,21 @@ public class LuceneDocumentIndex extends LuceneIndex {
 	
 	public boolean exists(Document document) {
 		try {
-			return findFirst(document)!= null;
+			Document existingDoc =findFirst(document);
+			boolean existanceCheck = (
+					existingDoc!= null && // at least a doc exists with all the fields 
+//					new SubsetComparator().compare(existingDoc, document)==0 &&  
+					existingDoc.getFields().size() == document.getFields().size() // no other fields other than what we searched for, if a superset is found then we need
+					);
+			if(logger.isDebugEnabled()) {
+				logger.debug(String.format("existence check returned %s",existanceCheck) );
+			}
+			return existanceCheck;
 		} catch (IOException e) {
 			logger.warn(e,e);
 			return false;
 		}
 		
-	}
-
-	public long count(Document match) throws IOException {		
-		return search(match).totalHits.value;
 	}
 
 

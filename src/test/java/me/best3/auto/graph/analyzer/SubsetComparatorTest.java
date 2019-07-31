@@ -8,18 +8,19 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import me.best3.auto.graph.index.Document;
-import me.best3.auto.graph.index.FileIndexer;
 import me.best3.auto.graph.index.FileIndexerTest;
+import me.best3.auto.graph.index.LocalFileSystemIndexer;
 
 public class SubsetComparatorTest {
+	private static final String DOCINDEX = "./docindex";
 	private static final String SUBSET_COMPARATOR_TEST_JSON = "SubsetComparatorTest.json";
-	private static FileIndexer fileIndexer;
+	private static LocalFileSystemIndexer localFSIndexer;
 	private static String testJsonFile = FileIndexerTest.class.getClassLoader().getResource(SUBSET_COMPARATOR_TEST_JSON).getFile();
 	
 	@BeforeAll
 	public static void setup() {
 		try {
-			fileIndexer = new FileIndexer();
+			localFSIndexer = new LocalFileSystemIndexer(DOCINDEX);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -27,9 +28,9 @@ public class SubsetComparatorTest {
 	
 	@AfterAll
 	public static void tearDown() {
-		if(SubsetComparatorTest.fileIndexer!=null) {
+		if(SubsetComparatorTest.localFSIndexer!=null) {
 			try {
-				SubsetComparatorTest.fileIndexer.close();
+				SubsetComparatorTest.localFSIndexer.close();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -38,9 +39,9 @@ public class SubsetComparatorTest {
 
 	@Test
 	public void processTokens() throws IOException, InterruptedException {
-		fileIndexer.processJSONFile(testJsonFile);
+		localFSIndexer.processJSONFile(testJsonFile);
 		SubsetComparator subsetComparator = new SubsetComparator();
-		List<Document> documents = fileIndexer.getDocuments(subsetComparator);
+		List<Document> documents = localFSIndexer.getDocuments(subsetComparator);
 		documents.forEach(d -> {
 			try {
 				System.out.println(d.toJSON());

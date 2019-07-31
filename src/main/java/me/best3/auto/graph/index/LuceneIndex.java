@@ -21,6 +21,8 @@ import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
 import org.apache.lucene.queryparser.flexible.standard.StandardQueryParser;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.MultiCollectorManager;
+import org.apache.lucene.search.MultiCollectorManager.Collectors;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ReferenceManager.RefreshListener;
 import org.apache.lucene.search.ScoreDoc;
@@ -34,6 +36,8 @@ import org.apache.lucene.store.NIOFSDirectory;
 public abstract class LuceneIndex implements AutoCloseable{
 	
 	private static final Logger logger = LogManager.getLogger(LuceneIndex.class);
+	
+	public static final String INDEX_LOCATION_PROPERTY_SUFIX = ".indexLocation";
 	// Path where the index directory resides
 	protected String indexLocation;
 	private final UnicodeWhitespaceAnalyzer unicodeWhiteSpaceAnalyzer = new UnicodeWhitespaceAnalyzer();
@@ -41,12 +45,12 @@ public abstract class LuceneIndex implements AutoCloseable{
 	private IndexWriter indexWriter;
 	private SearcherManager searcherManager;
 	
-	LuceneIndex() throws IOException {
+	LuceneIndex(String indexLocation) throws IOException {
 		if(logger.isDebugEnabled())
 		{
 			logger.debug("Lucene index constructed.");
 		}
-		this.indexLocation = getIndexLocation();
+		this.indexLocation = indexLocation;
 		Path indexPath = Paths.get(indexLocation);
 		if(logger.isDebugEnabled())
 		{
@@ -65,20 +69,24 @@ public abstract class LuceneIndex implements AutoCloseable{
 			public void run() {
 				try {
 					if (logger.isDebugEnabled()) {
-						logger.debug("Timer attempting refresh");
+						logger.debug(String.format("Timer for index %s attempting flush,commit and refresh reader",indexLocation));
 					}
-					getIndexWriter().flush();
-					getIndexWriter().commit();
-					searcherManager.maybeRefresh();
+					if(getIndexWriter().isOpen()) {
+						getIndexWriter().flush();
+						getIndexWriter().commit();
+						searcherManager.maybeRefresh();
+					}else {
+						this.cancel();
+					}
 				}catch(	AlreadyClosedException |
 						IOException e) {
-					logger.debug(e,e);
+					logger.debug(e);
 				}
 				
 			}
 		};
 		
-		Timer timer = new Timer(true);
+		Timer timer = new Timer("Timer-"+indexLocation,true);
 		timer.scheduleAtFixedRate(timerTask, 0, getReaderRefreshTime());
 	}
 
@@ -139,14 +147,18 @@ public abstract class LuceneIndex implements AutoCloseable{
 
 	@Override
 	public void close() throws Exception {
-		if(this.indexWriter!=null) {
-			this.indexWriter.close();
-		}
-		if(this.searcherManager!=null) {
-			this.searcherManager.close();
-		}
-		if(this.directory!=null) {
-			this.directory.close();
+		try {
+			if(this.indexWriter!=null) {
+					this.indexWriter.close();
+			}
+			if(this.searcherManager!=null) {
+				this.searcherManager.close();
+			}
+			if(this.directory!=null) {
+				this.directory.close();
+			}
+		}catch(IllegalStateException e) {
+			logger.debug(e);
 		}
 	}
 	
@@ -229,7 +241,38 @@ public abstract class LuceneIndex implements AutoCloseable{
 		
 	}
 	
+	public List<me.best3.auto.graph.index.Document> getAllDocs(Query query) throws IOException {
+		SearcherManager searcherManager = getSearcherManager(); 
+		IndexSearcher searcher = searcherManager.acquire();
+		try {
+			MultiCollectorManager multiCollectorManager = new MultiCollectorManager();
+			Collectors collector = multiCollectorManager.newCollector();
+			searcher.search(query, collector);
+			ArrayList<MultiCollectorManager.Collectors> collectors = new ArrayList<MultiCollectorManager.Collectors>();
+			collectors.add(collector);
+			multiCollectorManager.reduce(collectors);
+			return getUpToMaxDocs(searcher.getIndexReader());
+		}finally {
+			searcherManager.release(searcher);
+		}
+		
+	}
+	
+	public int count(me.best3.auto.graph.index.Document match) throws IOException {		
+		SearcherManager searcherManager = getSearcherManager(); 
+		IndexSearcher searcher = searcherManager.acquire();
+		try {
+			return searcher.count(match.getAllFieldsMatchQuery());
+		}finally {
+			searcherManager.release(searcher);
+		}
+	}
+	
+	public String getIndexLocation() {
+		return indexLocation;
+	}
+
 	/* Abstract methods*/
-	public abstract String getIndexLocation();
 	protected abstract long getReaderRefreshTime();
+
 }

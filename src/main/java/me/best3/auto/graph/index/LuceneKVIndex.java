@@ -13,12 +13,10 @@ import org.apache.lucene.search.WildcardQuery;
 public class LuceneKVIndex extends LuceneIndex{
 	private static final Logger logger = LogManager.getLogger(LuceneKVIndex.class);
 	
-	private static final String KVINDEX = "./kvindex";
-	private static final String INDEX_LOCATION = "me.best3.auto.graph.index.LuceneKVIndex";
 	private static final int READER_REFRESH_TIME = 400;
 	
-	LuceneKVIndex() throws IOException {
-		super();
+	LuceneKVIndex(String indexLocation) throws IOException {
+		super(indexLocation);
 	}
 	
 	
@@ -93,11 +91,6 @@ public class LuceneKVIndex extends LuceneIndex{
 		} catch (IOException e) {
 			logger.warn(e, e);
 		}
-	}
-	
-	@Override
-	public String getIndexLocation() {
-		return System.getProperty(INDEX_LOCATION, KVINDEX);
 	}
 
 	@Override

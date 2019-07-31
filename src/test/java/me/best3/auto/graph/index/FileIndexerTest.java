@@ -10,14 +10,15 @@ import org.junit.jupiter.api.Test;
 
 public class FileIndexerTest {
 	
+	private static final String FILE_INDEXER_TEST_INDEX = "./fileIndexerTestIndex";
 	private static final String FILE_INDEXER_TEST_JSON = "FileIndexerTest.json";
-	private static FileIndexer fileIndexer;
+	private static LocalFileSystemIndexer localFSIndexer;
 	private static String testJsonFile = FileIndexerTest.class.getClassLoader().getResource(FILE_INDEXER_TEST_JSON).getFile();
 	
 	@BeforeAll
 	public static void setup() {
 		try {
-			fileIndexer = new FileIndexer();
+			FileIndexerTest.localFSIndexer = new LocalFileSystemIndexer(FILE_INDEXER_TEST_INDEX);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -25,9 +26,9 @@ public class FileIndexerTest {
 	
 	@AfterAll
 	public static void tearDown() {
-		if(FileIndexerTest.fileIndexer!=null) {
+		if(FileIndexerTest.localFSIndexer!=null) {
 			try {
-				FileIndexerTest.fileIndexer.close();
+				FileIndexerTest.localFSIndexer.close();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -36,11 +37,11 @@ public class FileIndexerTest {
 
 	@Test
 	public void processTokens() throws IOException, InterruptedException {
-		fileIndexer.processJSONFile(testJsonFile);
+		FileIndexerTest.localFSIndexer.processJSONFile(testJsonFile);
 		Document doc = new Document();
 		doc.addText("fieldOne", "fieldOne");
 		doc.addText("fieldTwo", "fieldTwo");
-		assertEquals(1,fileIndexer.count(doc),"Document count mismatch");
+		assertEquals(1,localFSIndexer.count(doc),"Document count mismatch");
 	}
 
 }

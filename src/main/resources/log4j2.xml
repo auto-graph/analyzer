@@ -9,6 +9,8 @@
     <Root level="DEBUG">
       <AppenderRef ref="Console"/>
     </Root>
+    
+    
     <Logger name="me.best3.auto.graph.index.LuceneIndexFactory" level="INFO">
     	<AppenderRef ref="Console"/>
     </Logger>
@@ -27,5 +29,7 @@
      <Logger name="me.best3.auto.graph.index.LuceneKVIndex" level="INFO">
     	<AppenderRef ref="Console"/>
     </Logger>
+    
+    
   </Loggers>
 </Configuration>

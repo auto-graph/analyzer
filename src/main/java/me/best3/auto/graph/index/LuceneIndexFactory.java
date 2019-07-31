@@ -1,6 +1,9 @@
 package me.best3.auto.graph.index;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -9,34 +12,34 @@ import org.apache.logging.log4j.Logger;
 public class LuceneIndexFactory {
 	private static final Logger logger = LogManager.getLogger(LuceneIndexFactory.class);
 	
-	private static volatile LuceneKVIndex luceneKVIndex = null;
-	private static volatile LuceneDocumentIndex luceneDocumentIndex = null;
+	private static final Map<String, LuceneKVIndex> luceneKVIndexCache = Collections.synchronizedMap(new HashMap<String,LuceneKVIndex>());
+	private static final Map<String, LuceneDocumentIndex> luceneDocumentIndexCache = Collections.synchronizedMap(new HashMap<String,LuceneDocumentIndex>());
 
-	public LuceneKVIndex getLuceneKVIndex() throws IOException {
+	public LuceneKVIndex getLuceneKVIndex(String indexLocation) throws IOException {
 		if(logger.isDebugEnabled()) {
 			logger.debug("get KV index");
 		}
-		if (LuceneIndexFactory.luceneKVIndex == null) {
-			synchronized (this) {
-				if (LuceneIndexFactory.luceneKVIndex == null) {
-					LuceneIndexFactory.luceneKVIndex = new LuceneKVIndex();
+		if (!LuceneIndexFactory.luceneKVIndexCache.containsKey(indexLocation)) {
+			synchronized (LuceneIndexFactory.luceneKVIndexCache) {
+				if (!LuceneIndexFactory.luceneKVIndexCache.containsKey(indexLocation)) {
+					LuceneIndexFactory.luceneKVIndexCache.put(indexLocation,new LuceneKVIndex(indexLocation));
 				}
 			}
 		}
-		return LuceneIndexFactory.luceneKVIndex;
-	}
-	
-	public LuceneDocumentIndex getLuceneDocumentIndex() throws IOException {
+		return LuceneIndexFactory.luceneKVIndexCache.get(indexLocation);
+	}	
+
+	public LuceneDocumentIndex getLuceneDocumentIndex(String indexLocation) throws IOException {
 		long startTime=0;
 		boolean debugEnabled = logger.isDebugEnabled();
 		if(debugEnabled) {
 			logger.debug("get index");
 			startTime = System.currentTimeMillis();
 		}
-		if (LuceneIndexFactory.luceneDocumentIndex == null) {
-			synchronized (this) {
-				if (LuceneIndexFactory.luceneDocumentIndex == null) {
-					LuceneIndexFactory.luceneDocumentIndex = new LuceneDocumentIndex();
+		if (!LuceneIndexFactory.luceneDocumentIndexCache.containsKey(indexLocation)) {
+			synchronized (LuceneIndexFactory.luceneDocumentIndexCache) {
+				if (!LuceneIndexFactory.luceneDocumentIndexCache.containsKey(indexLocation)) {
+					LuceneIndexFactory.luceneDocumentIndexCache.put(indexLocation, new LuceneDocumentIndex(indexLocation));
 				}
 			}
 		}
@@ -45,7 +48,8 @@ public class LuceneIndexFactory {
 			endTime = System.currentTimeMillis();
 			logger.debug(String.format("Time to return document index singleton instance is %d",(endTime-startTime)));
 		}
-		return LuceneIndexFactory.luceneDocumentIndex;
+		return LuceneIndexFactory.luceneDocumentIndexCache.get(indexLocation);
 	}
+	
 
 }
