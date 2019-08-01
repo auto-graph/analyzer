@@ -28,7 +28,7 @@ public abstract class FileIndexer implements AutoCloseable{
 	@Override
 	public abstract void close() throws Exception;
 
-	public abstract List<Document> getDocuments(Comparator<Document> comparator) throws IOException;
+	public abstract List<Document> getAllDocuments(Comparator<Document> comparator) throws IOException;
 	
 	//walks through the tokens
 	private Supplier<JsonToken> getTokenSupplier(JsonParser jsonParser) {
@@ -96,7 +96,6 @@ public abstract class FileIndexer implements AutoCloseable{
 		}
 	}
 	
-	
 	/**
 	 * This is called at beginning of an object boundary and process that 
 	 * object in its entirety.
@@ -112,6 +111,7 @@ public abstract class FileIndexer implements AutoCloseable{
 		.forEach(t -> processToken(jsonParser,document));
 		this.writeDoc(document);
 	}
+	
 	/**
 	 * A valid JSON always starts with an object or an array
 	 * @throws IOException 
@@ -134,6 +134,7 @@ public abstract class FileIndexer implements AutoCloseable{
 			break;
 		}
 	}
+	
 	private void processToken(JsonParser jsonParser,Document document) {
 		logCurrentToken("processTokenDoc",jsonParser);
 		switch(jsonParser.currentToken()) {
@@ -152,6 +153,7 @@ public abstract class FileIndexer implements AutoCloseable{
 			break; 
 		}
 	}
+	
 	//Abstract methods
 	public abstract void writeDoc(Document document) throws IOException;
 	public abstract void writeKV(String key, String value) throws IOException;

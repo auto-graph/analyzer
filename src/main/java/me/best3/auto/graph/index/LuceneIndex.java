@@ -68,8 +68,6 @@ public abstract class LuceneIndex implements AutoCloseable{
 	public void clear() {
 		try {
 			indexWriter.deleteAll();
-//			indexWriter.flush();
-//			indexWriter.commit();
 		} catch (IOException e) {
 			logger.debug(e,e);
 		}
@@ -126,7 +124,7 @@ public abstract class LuceneIndex implements AutoCloseable{
 	}
 	
 	public int count(me.best3.auto.graph.index.Document match) throws IOException {		
-		SearcherManager searcherManager = getSearcherManager(); 
+		SearcherManager searcherManager = getSearcherManager();
 		IndexSearcher searcher = searcherManager.acquire();
 		try {
 			return searcher.count(match.getAllFieldsMatchQuery());

@@ -20,8 +20,8 @@ public class LocalFileSystemIndexer extends FileIndexer {
 
 	public LocalFileSystemIndexer(String indexLocation) throws IOException {
 		this.indexLocation = indexLocation;
-		this.documentIndex = luceneIndexFactory.getLuceneDocumentIndex(this.indexLocation+"/docindex");
-		this.kvIndex = luceneIndexFactory.getLuceneKVIndex(this.indexLocation+"/kvindex");
+		this.documentIndex = luceneIndexFactory.getLuceneDocumentIndex(this.indexLocation + "/docindex");
+		this.kvIndex = luceneIndexFactory.getLuceneKVIndex(this.indexLocation + "/kvindex");
 	}
 
 	public void clear() {
@@ -51,7 +51,7 @@ public class LocalFileSystemIndexer extends FileIndexer {
 		return documentIndex.getAllDocs();
 	}
 
-	public List<Document> getDocuments(Comparator<Document> comparator) throws IOException {
+	public List<Document> getAllDocuments(Comparator<Document> comparator) throws IOException {
 		List<Document> documents = this.getAllDocs();
 		Collections.sort(documents, comparator);
 		return documents;
@@ -71,8 +71,8 @@ public class LocalFileSystemIndexer extends FileIndexer {
 //			});
 //		List<Document> matches = this.documentIndex.exactMatches(match);
 		List<Document> matches = this.documentIndex.exactMatches(document);
-		if(matches.size()==0) {
-			if(logger.isDebugEnabled()) {
+		if (matches.size() == 0) {
+			if (logger.isDebugEnabled()) {
 				logger.debug("Doc dosent exist attempting write.");
 			}
 //			String uuid = UUID.randomUUID().toString();
@@ -88,5 +88,5 @@ public class LocalFileSystemIndexer extends FileIndexer {
 	public void writeKV(String key, String value) throws IOException {
 		this.kvIndex.update(key, value);
 	}
-	
+
 }

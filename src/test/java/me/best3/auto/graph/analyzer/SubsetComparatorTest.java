@@ -41,7 +41,7 @@ public class SubsetComparatorTest {
 	public void processTokens() throws IOException, InterruptedException {
 		localFSIndexer.processJSONFile(testJsonFile);
 		SubsetComparator subsetComparator = new SubsetComparator();
-		List<Document> documents = localFSIndexer.getDocuments(subsetComparator);
+		List<Document> documents = localFSIndexer.getAllDocuments(subsetComparator);
 		documents.forEach(d -> {
 			try {
 				System.out.println(d.toJSON());
