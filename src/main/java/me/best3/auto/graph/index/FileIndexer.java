@@ -23,6 +23,63 @@ public abstract class FileIndexer implements AutoCloseable{
 	private static final Logger logger = LogManager.getLogger(FileIndexer.class);
 	private JsonFactory jsonFactory = new JsonFactory();
 
+	public abstract void clear();
+
+	@Override
+	public abstract void close() throws Exception;
+
+	public abstract List<Document> getDocuments(Comparator<Document> comparator) throws IOException;
+	
+	//walks through the tokens
+	private Supplier<JsonToken> getTokenSupplier(JsonParser jsonParser) {
+		return () -> {
+			try {
+				logger.debug("Move to next token");
+				return jsonParser.nextToken();
+			} catch (IOException e) {
+				logger.error(e, e);
+			}
+			return null;
+		};
+	}
+	
+	private void logCurrentToken(String caller, JsonParser jsonParser) {
+		try {
+			if(logger.isDebugEnabled()) {
+				logger.debug(String.format("%s => %s %s %s", caller, jsonParser.currentToken(), jsonParser.currentName(), jsonParser.getValueAsString()));
+			}
+		} catch (IOException e) {
+			logger.error(e,e);
+		}
+	}
+
+	/**
+	 * Called at an array boundary, this method process that array in its entirety
+	 * 
+	 * @param jsonParser
+	 */
+	private void processArray(JsonParser jsonParser) {
+		logCurrentToken("processArray",jsonParser);
+		Stream.generate(getTokenSupplier(jsonParser))
+		.takeWhile(t -> (t != null && !t.equals(JsonToken.END_ARRAY)) )
+		.forEach(t -> processToken(jsonParser));
+	}
+
+	/**
+	 * Captures a fields name
+	 * 
+	 * @param jsonParser
+	 * @param document
+	 */
+	private void processField(JsonParser jsonParser, Document document) {
+		logCurrentToken("processField",jsonParser);
+		try {
+			document.addString(jsonParser.currentName(), jsonParser.currentName());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
 	/**
 	 * Parses JSON and generates a token stream and processes all tokens
 	 * @param fileName
@@ -38,17 +95,23 @@ public abstract class FileIndexer implements AutoCloseable{
 			logger.debug(e,e);
 		}
 	}
-
-	private void logCurrentToken(String caller, JsonParser jsonParser) {
-		try {
-			if(logger.isDebugEnabled()) {
-				logger.debug(String.format("%s => %s %s %s", caller, jsonParser.currentToken(), jsonParser.currentName(), jsonParser.getValueAsString()));
-			}
-		} catch (IOException e) {
-			logger.error(e,e);
-		}
+	
+	
+	/**
+	 * This is called at beginning of an object boundary and process that 
+	 * object in its entirety.
+	 * Creates a new instance of document and builds the document
+	 * 
+	 * @param jsonParser
+	 * @throws IOException
+	 */
+	private void processObject(JsonParser jsonParser) throws IOException {
+		Document document = new Document();
+		Stream.generate(getTokenSupplier(jsonParser))
+		.takeWhile(t -> (t != null && !t.equals(JsonToken.END_OBJECT)) )
+		.forEach(t -> processToken(jsonParser,document));
+		this.writeDoc(document);
 	}
-
 	/**
 	 * A valid JSON always starts with an object or an array
 	 * @throws IOException 
@@ -71,7 +134,6 @@ public abstract class FileIndexer implements AutoCloseable{
 			break;
 		}
 	}
-	
 	private void processToken(JsonParser jsonParser,Document document) {
 		logCurrentToken("processTokenDoc",jsonParser);
 		switch(jsonParser.currentToken()) {
@@ -90,69 +152,8 @@ public abstract class FileIndexer implements AutoCloseable{
 			break; 
 		}
 	}
-	
-	/**
-	 * Called at an array boundary, this method process that array in its entirety
-	 * 
-	 * @param jsonParser
-	 */
-	private void processArray(JsonParser jsonParser) {
-		logCurrentToken("processArray",jsonParser);
-		Stream.generate(getTokenSupplier(jsonParser))
-		.takeWhile(t -> (t != null && !t.equals(JsonToken.END_ARRAY)) )
-		.forEach(t -> processToken(jsonParser));
-	}
-
-	/**
-	 * This is called at beginning of an object boundary and process that 
-	 * object in its entirety.
-	 * Creates a new instance of document and builds the document
-	 * 
-	 * @param jsonParser
-	 * @throws IOException
-	 */
-	private void processObject(JsonParser jsonParser) throws IOException {
-		Document document = new Document();
-		Stream.generate(getTokenSupplier(jsonParser))
-		.takeWhile(t -> (t != null && !t.equals(JsonToken.END_OBJECT)) )
-		.forEach(t -> processToken(jsonParser,document));
-		this.indexDocument(document);
-	}
-
-	/**
-	 * Captures a fields name
-	 * 
-	 * @param jsonParser
-	 * @param document
-	 */
-	private void processField(JsonParser jsonParser, Document document) {
-		logCurrentToken("processField",jsonParser);
-		try {
-			document.addString(jsonParser.currentName(), jsonParser.currentName());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	//walks through the tokens
-	private Supplier<JsonToken> getTokenSupplier(JsonParser jsonParser) {
-		return () -> {
-			try {
-				logger.debug("Move to next token");
-				return jsonParser.nextToken();
-			} catch (IOException e) {
-				logger.error(e, e);
-			}
-			return null;
-		};
-	}
-	
-	
 	//Abstract methods
-	public abstract void indexDocument(Document document) throws IOException;
-	public abstract List<Document> getDocuments(Comparator<Document> comparator) throws IOException;
-	public abstract void clear();
-	@Override
-	public abstract void close() throws Exception;
+	public abstract void writeDoc(Document document) throws IOException;
+	public abstract void writeKV(String key, String value) throws IOException;
 
 }

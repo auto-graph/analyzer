@@ -5,12 +5,16 @@ import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.document.Document;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.WildcardQuery;
 
-public class LuceneKVIndex extends LuceneIndex{
+public class LuceneKVIndex extends LuceneDocumentIndex{
+	private static final String WILD_CARD = "*";
+
 	private static final Logger logger = LogManager.getLogger(LuceneKVIndex.class);
 	
 	private static final int READER_REFRESH_TIME = 400;
@@ -19,6 +23,36 @@ public class LuceneKVIndex extends LuceneIndex{
 		super(indexLocation);
 	}
 	
+	public Optional<SearchResult> findFirst(String key) throws IOException {
+		if (logger.isDebugEnabled()) {
+			logger.debug("findFirst method called");
+		}
+		if(null==key) {
+			throw new IOException("key cannot be null.");
+		}
+		
+		//Query parser is not thread safe
+		IndexSearcher searcher = getSearcherManager().acquire();
+		try {
+			Query query = getWildCardQuery(key);
+			TopDocs docs = searcher.search(query, 1);
+			if (docs.totalHits.value > 0) {
+				return  Optional.of(new SearchResult(searcher, docs.scoreDocs[0].doc));
+			}
+		}finally {
+			getSearcherManager().release(searcher);
+		}
+		return Optional.empty();
+	}
+	
+	@Override
+	protected long getReaderRefreshTime() {
+		return  READER_REFRESH_TIME;
+	}
+
+	private WildcardQuery getWildCardQuery(String key) {
+		return new WildcardQuery(new Term(key,WILD_CARD));
+	}
 	
 	public String read(String key) throws IOException {
 		if (logger.isDebugEnabled()) {
@@ -37,28 +71,6 @@ public class LuceneKVIndex extends LuceneIndex{
 		return null;
 	}
 	
-	public Optional<SearchResult> findFirst(String key) throws IOException {
-		if (logger.isDebugEnabled()) {
-			logger.debug("findFirst method called");
-		}
-		if(null==key) {
-			throw new IOException("key cannot be null.");
-		}
-		
-		//Query parser is not thread safe
-		IndexSearcher searcher = getSearcherManager().acquire();
-		try {
-			WildcardQuery query = new WildcardQuery(new Term(key,"*"));
-			TopDocs docs = searcher.search(query, 1);
-			if (docs.totalHits.value > 0) {
-				return  Optional.of(new SearchResult(searcher, docs.scoreDocs[0].doc));
-			}
-		}finally {
-			getSearcherManager().release(searcher);
-		}
-		return Optional.empty();
-	}
-	
 	/**
 	 * Lucene is an index and not a cache, refrain from updates
 	 * @param key
@@ -67,34 +79,16 @@ public class LuceneKVIndex extends LuceneIndex{
 	 * @throws IOException
 	 */
 	public boolean update(String key, String value) throws IOException {
-		WildcardQuery query = new WildcardQuery(new Term(key,"*"));
+		Query query = getWildCardQuery(key);
 		getIndexWriter().deleteDocuments(query);
 		write(key,value);
 		return true;
 	}
-	
-	public long getDocCount() throws IOException {
-		IndexSearcher searcher = getSearcherManager().acquire();
-		try{
-			return searcher.getIndexReader().numDocs();
-		}finally {
-			getSearcherManager().release(searcher);
-		}
-	}
-	
-	public void refreshReader() {
-		if(logger.isDebugEnabled()) {
-			logger.debug("Manual reader refresh.");
-		}
-		try {
-			getSearcherManager().maybeRefresh();
-		} catch (IOException e) {
-			logger.warn(e, e);
-		}
-	}
 
-	@Override
-	protected long getReaderRefreshTime() {
-		return  READER_REFRESH_TIME;
+	public void write(String key, String value) throws IOException {
+		logger.debug("write method called");
+		me.best3.auto.graph.index.Document doc = new me.best3.auto.graph.index.Document(new Document());
+		doc.addString(key, value);
+		super.write(doc);
 	}
 }

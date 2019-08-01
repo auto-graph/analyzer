@@ -34,9 +34,8 @@ public class Document implements Iterable<IndexableField> {
 		this.document = document;
 	}
 	
-	@Override
-	public Iterator<IndexableField> iterator() {
-		return this.document.iterator();
+	private void addFieldToDocument(Field field) {
+		this.document.add(field);
 	}
 	
 	public void addString(String fieldName, String value) {
@@ -47,31 +46,10 @@ public class Document implements Iterable<IndexableField> {
 		addFieldToDocument(new TextField(fieldName,value,Store.YES));
 	}
 	
-	private void addFieldToDocument(Field field) {
-		this.document.add(field);
-	}
-	
 	public String get(String fieldName) {
 		return this.document.get(fieldName);
 	}
 	
-	public void RemoveField(String fieldName) {
-		this.document.removeField(fieldName);
-	}
-	
-	public void RemoveFields(String fieldName) {
-		this.document.removeFields(fieldName);
-	}
-	
-	public List<String> getFields(){
-		List<String> fields = this.document.getFields()
-				.parallelStream()
-				.map((f) -> { return f.name();})
-				.collect(Collectors.toList());
-		Collections.sort(fields);
-		return fields;
-	}
-
 	Query getAllFieldsMatchQuery() {
 		if(logger.isDebugEnabled()) {
 			logger.debug("All fields query called.");
@@ -83,8 +61,30 @@ public class Document implements Iterable<IndexableField> {
 			});			
 			return booleanQueryBuilder.build();
 	}
+	
 	org.apache.lucene.document.Document getDocument(){
 		return this.document;
+	}
+	
+	public List<String> getFields(){
+		List<String> fields = this.document.getFields()
+				.parallelStream()
+				.map((f) -> { return f.name();})
+				.collect(Collectors.toList());
+		Collections.sort(fields);
+		return fields;
+	}
+	
+	@Override
+	public Iterator<IndexableField> iterator() {
+		return this.document.iterator();
+	}
+
+	public void RemoveField(String fieldName) {
+		this.document.removeField(fieldName);
+	}
+	public void RemoveFields(String fieldName) {
+		this.document.removeFields(fieldName);
 	}
 	
 	public String toJSON() throws IOException {

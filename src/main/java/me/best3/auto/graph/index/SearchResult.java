@@ -17,12 +17,12 @@ public class SearchResult {
 		this.document = searcher.doc(this.docId);
 	}
 	
-	public Document getDocument() throws IOException {
-		return this.document;
-	}
-
 	public int getDocId() {
 		return docId;
+	}
+
+	public Document getDocument() throws IOException {
+		return this.document;
 	}
 
 }

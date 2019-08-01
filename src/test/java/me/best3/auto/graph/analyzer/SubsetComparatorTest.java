@@ -12,7 +12,7 @@ import me.best3.auto.graph.index.FileIndexerTest;
 import me.best3.auto.graph.index.LocalFileSystemIndexer;
 
 public class SubsetComparatorTest {
-	private static final String DOCINDEX = "./docindex";
+	private static final String DOCINDEX = "./subsetcomp";
 	private static final String SUBSET_COMPARATOR_TEST_JSON = "SubsetComparatorTest.json";
 	private static LocalFileSystemIndexer localFSIndexer;
 	private static String testJsonFile = FileIndexerTest.class.getClassLoader().getResource(SUBSET_COMPARATOR_TEST_JSON).getFile();

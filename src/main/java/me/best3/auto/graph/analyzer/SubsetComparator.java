@@ -9,6 +9,13 @@ public class SubsetComparator implements Comparator<Document> {
 
 	@Override
 	public int compare(Document docA, Document docB) {
+		if(docA==null && docB==null) {
+			return 0;
+		}else if(docA==null && docB!=null) { // in our case a null set is a sub set of every non null set
+			return 1; //B is superset of A (A U B)
+		}else if (docA!=null && docB==null) {
+			return -1; //A is superset of B (B U A)
+		}
 		String[] docAFields = docA.getFields().toArray(new String[0]);
 		String[] docBFields = docB.getFields().toArray(new String[0]);
 //		int smallerArrayLength = Math.min(docAFields.length, docBFields.length);
@@ -25,14 +32,14 @@ public class SubsetComparator implements Comparator<Document> {
 			}
 		});
 		
-		if(mismatchIndex == -1) {
+		if(mismatchIndex == -1 && docAFields.length == docBFields.length) {
 			return 0;
-		}else if(mismatchIndex >= docAFields.length) {//B is superset of A (B U A)
+		}else if(mismatchIndex == -1 && docBFields.length > docAFields.length) {//B is superset of A (A U B) , because this logically A<B
 			return -1;
-		}else if(mismatchIndex >= docBFields.length) {//A is superset of B (A U B)
+		}else if(mismatchIndex == -1 && docAFields.length > docBFields.length) {//A is superset of B (B U A) , because this is logically A>B
 			return 1;
 		}
-		return 0;
+		return 1;
 	}
 
 }

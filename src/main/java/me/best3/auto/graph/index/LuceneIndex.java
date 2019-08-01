@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -38,14 +39,16 @@ public abstract class LuceneIndex implements AutoCloseable{
 	private static final Logger logger = LogManager.getLogger(LuceneIndex.class);
 	
 	public static final String INDEX_LOCATION_PROPERTY_SUFIX = ".indexLocation";
+	private static final int DOC_LIMIT =100;
 	// Path where the index directory resides
 	protected String indexLocation;
 	private final UnicodeWhitespaceAnalyzer unicodeWhiteSpaceAnalyzer = new UnicodeWhitespaceAnalyzer();
 	private Directory directory;
 	private IndexWriter indexWriter;
 	private SearcherManager searcherManager;
+	private boolean closed = false;
 	
-	LuceneIndex(String indexLocation) throws IOException {
+ 	LuceneIndex(String indexLocation) throws IOException {
 		if(logger.isDebugEnabled())
 		{
 			logger.debug("Lucene index constructed.");
@@ -62,87 +65,14 @@ public abstract class LuceneIndex implements AutoCloseable{
 		refreshReaderTimer();
 	}
 
-	private void refreshReaderTimer() {
-		TimerTask timerTask = new TimerTask() {
-			
-			@Override
-			public void run() {
-				try {
-					if (logger.isDebugEnabled()) {
-						logger.debug(String.format("Timer for index %s attempting flush,commit and refresh reader",indexLocation));
-					}
-					if(getIndexWriter().isOpen()) {
-						getIndexWriter().flush();
-						getIndexWriter().commit();
-						searcherManager.maybeRefresh();
-					}else {
-						this.cancel();
-					}
-				}catch(	AlreadyClosedException |
-						IOException e) {
-					logger.debug(e);
-				}
-				
-			}
-		};
-		
-		Timer timer = new Timer("Timer-"+indexLocation,true);
-		timer.scheduleAtFixedRate(timerTask, 0, getReaderRefreshTime());
-	}
-
-	private SearcherManager createReader() throws IOException {
-		IndexWriter indexWriterRef = this.getIndexWriter();
+	public void clear() {
 		try {
-			return new SearcherManager(indexWriterRef, new SearcherFactory());
-		} catch (IndexNotFoundException e) {
-			if(logger.isDebugEnabled()) {
-				logger.warn(e,e);
-			}
-			write("00001","00001");//without this write searcher fails to find index on brand new instances of index
-			this.indexWriter.deleteAll();
-			this.indexWriter.commit();
-			return new SearcherManager(indexWriterRef, new SearcherFactory());
+			indexWriter.deleteAll();
+//			indexWriter.flush();
+//			indexWriter.commit();
+		} catch (IOException e) {
+			logger.debug(e,e);
 		}
-	}
-
-	private void createWriter() throws IOException {
-		IndexWriterConfig indexWriterConfig = new IndexWriterConfig(this.unicodeWhiteSpaceAnalyzer);
-		if(logger.isDebugEnabled()) {
-			logger.debug(String.format("reader attributes %s", indexWriterConfig.getReaderAttributes()));
-		}
-		indexWriterConfig.setOpenMode(OpenMode.CREATE_OR_APPEND);
-		this.indexWriter = new IndexWriter(directory, indexWriterConfig);
-	}
-	
-	public void write(String key, String value) throws IOException {
-		logger.debug("write method called");
-		Document doc = new Document();
-		doc.add(new Field(key, value, TextField.TYPE_STORED));
-		IndexWriter indexWriter = getIndexWriter();
-		indexWriter.addDocument(doc);
-//		indexWriter.commit();
-	}
-	
-	public UnicodeWhitespaceAnalyzer getStandardAnalyzer() {
-		return this.unicodeWhiteSpaceAnalyzer;
-	}
-
-	public Directory getDirectory() {
-		return directory;
-	}
-
-	public IndexWriter getIndexWriter() {
-		return this.indexWriter;
-	}
-
-	public SearcherManager getSearcherManager() throws IOException {
-		if(!searcherManager.isSearcherCurrent()) {
-			if(logger.isDebugEnabled()) {
-				logger.debug("searcher not current.");
-			}
-			searcherManager.maybeRefreshBlocking();
-		}
-		return searcherManager;
 	}
 
 	@Override
@@ -159,9 +89,76 @@ public abstract class LuceneIndex implements AutoCloseable{
 			}
 		}catch(IllegalStateException e) {
 			logger.debug(e);
+		}finally {
+			this.closed = true;
 		}
 	}
 	
+	public boolean isOpen() {
+		return !this.closed;
+	}
+
+	private void collectExactMatches(me.best3.auto.graph.index.Document match, IndexSearcher searcher, 
+			TopDocs topDocs, List<me.best3.auto.graph.index.Document> results) {
+		results.addAll(Arrays.asList(topDocs.scoreDocs).parallelStream()
+				.map(scoreDoc -> {
+			try {
+				return new me.best3.auto.graph.index.Document(searcher.doc(scoreDoc.doc));
+			} catch (IOException e) {
+				logger.debug(e,e);
+			}
+			return new me.best3.auto.graph.index.Document();
+		})
+				.filter(d -> {return match.getFields().size()== d.getFields().size();}) // there are exactly the same fields we want no more or less
+				.collect(java.util.stream.Collectors.toList()));
+	}
+	
+	private void collectResults(IndexSearcher searcher, TopDocs topDocs,
+			List<me.best3.auto.graph.index.Document> results) {
+		results.addAll(Arrays.asList(topDocs.scoreDocs).parallelStream().map(scoreDoc -> {
+			try {
+				return new me.best3.auto.graph.index.Document(searcher.doc(scoreDoc.doc));
+			} catch (IOException e) {
+				logger.debug(e,e);
+			}
+			return new me.best3.auto.graph.index.Document();
+		}).collect(java.util.stream.Collectors.toList()));
+	}
+	
+	public int count(me.best3.auto.graph.index.Document match) throws IOException {		
+		SearcherManager searcherManager = getSearcherManager(); 
+		IndexSearcher searcher = searcherManager.acquire();
+		try {
+			return searcher.count(match.getAllFieldsMatchQuery());
+		}finally {
+			searcherManager.release(searcher);
+		}
+	}
+
+	private SearcherManager createReader() throws IOException {
+		IndexWriter indexWriterRef = this.getIndexWriter();
+		try {
+			return new SearcherManager(indexWriterRef, new SearcherFactory());
+		} catch (IndexNotFoundException e) {
+			if(logger.isDebugEnabled()) {
+				logger.warn(e,e);
+			}
+			internalWrite("00001","00001");//without this write searcher fails to find index on brand new instances of index
+			this.indexWriter.deleteAll();
+			this.indexWriter.commit();
+			return new SearcherManager(indexWriterRef, new SearcherFactory());
+		}
+	}
+
+	private void createWriter() throws IOException {
+		IndexWriterConfig indexWriterConfig = new IndexWriterConfig(this.unicodeWhiteSpaceAnalyzer);
+		if(logger.isDebugEnabled()) {
+			logger.debug(String.format("reader attributes %s", indexWriterConfig.getReaderAttributes()));
+		}
+		indexWriterConfig.setOpenMode(OpenMode.CREATE_OR_APPEND);
+		this.indexWriter = new IndexWriter(directory, indexWriterConfig);
+	}
+
 	public void debugDumpIndex() throws IOException {
 		if(!logger.isDebugEnabled()) {
 			return;
@@ -174,13 +171,13 @@ public abstract class LuceneIndex implements AutoCloseable{
 		getSearcherManager().addListener(new RefreshListener() {
 			
 			@Override
-			public void beforeRefresh() throws IOException {
-				logger.debug("Before refresh");
+			public void afterRefresh(boolean didRefresh) throws IOException {
+				logger.debug("after refresh " + didRefresh);
 			}
 			
 			@Override
-			public void afterRefresh(boolean didRefresh) throws IOException {
-				logger.debug("after refresh " + didRefresh);
+			public void beforeRefresh() throws IOException {
+				logger.debug("Before refresh");
 			}
 		});
 		try {
@@ -211,23 +208,72 @@ public abstract class LuceneIndex implements AutoCloseable{
 		}
 	}
 
-	private List<me.best3.auto.graph.index.Document> getUpToMaxDocs(IndexReader reader) throws IOException {
-		List<me.best3.auto.graph.index.Document> documents = new ArrayList<me.best3.auto.graph.index.Document>();
-		for(int i=0;i<reader.maxDoc();i++) {
-			Document doc = reader.document(i);
-			documents.add(new me.best3.auto.graph.index.Document(doc));
+	public List<me.best3.auto.graph.index.Document> exactMatches(me.best3.auto.graph.index.Document match) throws IOException {
+		SearcherManager searcherManager = getSearcherManager();
+		IndexSearcher searcher = searcherManager.acquire();
+		List<me.best3.auto.graph.index.Document> results = new ArrayList<me.best3.auto.graph.index.Document>();
+		try {
+			TopDocs topDocs = search(match, DOC_LIMIT);
+			collectExactMatches(match, searcher, topDocs, results);
+			while(topDocs.scoreDocs.length>=DOC_LIMIT) {
+				topDocs = search(topDocs.scoreDocs[topDocs.scoreDocs.length-1], match.getAllFieldsMatchQuery(), DOC_LIMIT);
+				collectExactMatches(match, searcher, topDocs, results);
+			}
+		}finally {
+			searcherManager.release(searcher);
 		}
-		return documents;
+		return results;
+	}
+	
+	/**
+	 * At least all the fields in match document will be present on result. 
+	 * There may be other fields on the matched document. This method will not do an exact match
+	 * 
+	 * @param match
+	 * @return
+	 */
+	public boolean exists(me.best3.auto.graph.index.Document match) {
+		try {
+			boolean existanceCheck = (findFirst(match)!=null);
+			if(logger.isDebugEnabled()) {
+				logger.debug(String.format("existence check returned %s",existanceCheck) );
+			}
+			return existanceCheck;
+		} catch (IOException e) {
+			logger.warn(e,e);
+			return false;
+		}
+	}
+
+	public List<me.best3.auto.graph.index.Document> find(me.best3.auto.graph.index.Document match) throws IOException{
+		SearcherManager searcherManager = getSearcherManager();
+		IndexSearcher searcher = searcherManager.acquire();
+		List<me.best3.auto.graph.index.Document> results = new ArrayList<me.best3.auto.graph.index.Document>();
+		try {
+			TopDocs topDocs = search(match, DOC_LIMIT);
+			collectResults(searcher, topDocs, results);
+			while(topDocs.scoreDocs.length>=DOC_LIMIT) {
+				topDocs = search(topDocs.scoreDocs[topDocs.scoreDocs.length-1], match.getAllFieldsMatchQuery(), DOC_LIMIT);
+				collectResults(searcher, topDocs, results);
+			}
+		}finally {
+			searcherManager.release(searcher);
+		}
+		return results;
 	}	
 
-	public void clear() {
-		try {
-			indexWriter.deleteAll();
-//			indexWriter.flush();
-//			indexWriter.commit();
-		} catch (IOException e) {
-			logger.debug(e,e);
+	public me.best3.auto.graph.index.Document findFirst(me.best3.auto.graph.index.Document match) throws IOException {
+		if(logger.isDebugEnabled()) {
+			logger.debug("find first using document : " + match.toJSON());
 		}
+		TopDocs topDocs = search(match,1);
+		if(logger.isDebugEnabled()) {
+			logger.debug("topDocs count : " + topDocs.totalHits.value);
+		}
+		if(topDocs.totalHits.value>0) {
+			return getDocument(topDocs.scoreDocs[0].doc);
+		}
+		return null;
 	}
 	
 	public List<me.best3.auto.graph.index.Document> getAllDocs() throws IOException {
@@ -250,7 +296,7 @@ public abstract class LuceneIndex implements AutoCloseable{
 			searcher.search(query, collector);
 			ArrayList<MultiCollectorManager.Collectors> collectors = new ArrayList<MultiCollectorManager.Collectors>();
 			collectors.add(collector);
-			multiCollectorManager.reduce(collectors);
+			Object[] docs = multiCollectorManager.reduce(collectors);
 			return getUpToMaxDocs(searcher.getIndexReader());
 		}finally {
 			searcherManager.release(searcher);
@@ -258,11 +304,24 @@ public abstract class LuceneIndex implements AutoCloseable{
 		
 	}
 	
-	public int count(me.best3.auto.graph.index.Document match) throws IOException {		
-		SearcherManager searcherManager = getSearcherManager(); 
+	public Directory getDirectory() {
+		return directory;
+	}
+	
+	public long getDocCount() throws IOException {
+		IndexSearcher searcher = getSearcherManager().acquire();
+		try{
+			return searcher.getIndexReader().numDocs();
+		}finally {
+			getSearcherManager().release(searcher);
+		}
+	}
+
+	private me.best3.auto.graph.index.Document getDocument(int docID) throws IOException {
+		SearcherManager searcherManager = getSearcherManager();
 		IndexSearcher searcher = searcherManager.acquire();
 		try {
-			return searcher.count(match.getAllFieldsMatchQuery());
+			return new me.best3.auto.graph.index.Document(searcher.doc(docID));
 		}finally {
 			searcherManager.release(searcher);
 		}
@@ -271,8 +330,113 @@ public abstract class LuceneIndex implements AutoCloseable{
 	public String getIndexLocation() {
 		return indexLocation;
 	}
-
+	
+	public IndexWriter getIndexWriter() {
+		return this.indexWriter;
+	}
+	
 	/* Abstract methods*/
 	protected abstract long getReaderRefreshTime();
+
+	public SearcherManager getSearcherManager() throws IOException {
+		if(!searcherManager.isSearcherCurrent()) {
+			if(logger.isDebugEnabled()) {
+				logger.debug("searcher not current.");
+			}
+			searcherManager.maybeRefreshBlocking();
+		}
+		return searcherManager;
+	}
+	
+	public UnicodeWhitespaceAnalyzer getStandardAnalyzer() {
+		return this.unicodeWhiteSpaceAnalyzer;
+	}
+
+	private List<me.best3.auto.graph.index.Document> getUpToMaxDocs(IndexReader reader) throws IOException {
+		List<me.best3.auto.graph.index.Document> documents = new ArrayList<me.best3.auto.graph.index.Document>();
+		for(int i=0;i<reader.maxDoc();i++) {
+			Document doc = reader.document(i);
+			documents.add(new me.best3.auto.graph.index.Document(doc));
+		}
+		return documents;
+	}
+	
+	private void internalWrite(String key, String value) throws IOException {
+		logger.debug("Internal write method called");
+		Document doc = new Document();
+		doc.add(new Field(key, value, TextField.TYPE_STORED));
+		IndexWriter indexWriter = getIndexWriter();
+		indexWriter.addDocument(doc);
+	}
+	
+	private void refreshReaderTimer() {
+		TimerTask timerTask = new TimerTask() {
+			
+			@Override
+			public void run() {
+				try {
+					if (logger.isDebugEnabled()) {
+						logger.debug(String.format("Timer for index %s attempting flush,commit and refresh reader",indexLocation));
+					}
+					if(getIndexWriter().isOpen()) {
+						getIndexWriter().flush();
+						getIndexWriter().commit();
+						searcherManager.maybeRefresh();
+					}else {
+						this.cancel();
+					}
+				}catch(	AlreadyClosedException |
+						IOException e) {
+					logger.debug(e);
+				}
+				
+			}
+		};
+		
+		Timer timer = new Timer("Timer-"+indexLocation,true);
+		timer.scheduleAtFixedRate(timerTask, 0, getReaderRefreshTime());
+	}
+	
+	public TopDocs search(me.best3.auto.graph.index.Document match, int topN) throws IOException {
+		if(match!=null && topN>0) {
+			Query query = match.getAllFieldsMatchQuery();
+			if(query!=null) {//not a possible scenario just being defensive
+				return search(query, topN);
+			}
+		}
+		return null;
+	}
+	
+	protected final TopDocs search(Query query, int topN) throws IOException {
+		SearcherManager searcherManager = getSearcherManager();
+		IndexSearcher searcher = searcherManager.acquire();
+		try {
+			if(logger.isDebugEnabled()) {
+				logger.debug("searching using query : " + query.toString());
+			}
+			if(query!=null) {
+				return searcher.search(query, topN);
+			}
+		}finally {
+			searcherManager.release(searcher);
+		}
+		return null;
+	}
+	
+	public final TopDocs search(ScoreDoc doc,Query query, int topN) throws IOException {
+		SearcherManager searcherManager = getSearcherManager();
+		IndexSearcher searcher = searcherManager.acquire();
+		try {
+			if(logger.isDebugEnabled()) {
+				logger.debug("searching using query : " + query.toString());
+			}
+			if(query!=null) {
+				return searcher.searchAfter(doc,query, topN);
+			}
+		}finally {
+			searcherManager.release(searcher);
+		}
+		return null;
+	}
 
 }
