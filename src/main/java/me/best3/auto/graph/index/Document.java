@@ -51,13 +51,28 @@ public class Document implements Iterable<IndexableField> {
 	}
 	
 	Query getAllFieldsMatchQuery() {
+//		if(logger.isDebugEnabled()) {
+//			logger.debug("All fields query called.");
+//		}
+//		List<IndexableField> fields = this.document.getFields();
+//		BooleanQuery.Builder booleanQueryBuilder = new BooleanQuery.Builder();
+//			fields.stream().forEach(field -> {
+//				booleanQueryBuilder.add(new BooleanClause(new TermQuery(new Term(field.name(), this.document.get(field.name()))), BooleanClause.Occur.MUST));
+//			});			
+//			return booleanQueryBuilder.build();
+		return getAllFieldsMatchQuery(Collections.emptyList());
+	}
+	
+	Query getAllFieldsMatchQuery(List<String> fieldExclusionList) {
 		if(logger.isDebugEnabled()) {
 			logger.debug("All fields query called.");
 		}
 		List<IndexableField> fields = this.document.getFields();
 		BooleanQuery.Builder booleanQueryBuilder = new BooleanQuery.Builder();
-			fields.stream().forEach(field -> {
-				booleanQueryBuilder.add(new BooleanClause(new TermQuery(new Term(field.name(), this.document.get(field.name()))), BooleanClause.Occur.MUST));
+			fields.stream()
+			.filter(field -> {return !(fieldExclusionList.contains(field.name()));})//if doesnot contain
+			.forEach(field -> {
+					booleanQueryBuilder.add(new BooleanClause(new TermQuery(new Term(field.name(), this.document.get(field.name()))), BooleanClause.Occur.MUST));
 			});			
 			return booleanQueryBuilder.build();
 	}

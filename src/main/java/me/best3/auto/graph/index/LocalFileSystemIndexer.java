@@ -4,12 +4,13 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class LocalFileSystemIndexer extends FileIndexer {
-//	private static final String ID_FIELD = "ID";
+	private static final String ID_FIELD = "ID";
 
 	private static final Logger logger = LogManager.getLogger(LocalFileSystemIndexer.class);
 
@@ -63,20 +64,13 @@ public class LocalFileSystemIndexer extends FileIndexer {
 
 	@Override
 	public void writeDoc(Document document) throws IOException {
-//		Document match = new Document(new org.apache.lucene.document.Document());
-//		document.iterator().forEachRemaining(f -> {
-//				if(!ID_FIELD.equalsIgnoreCase(f.name())) { // ignore id field as its a generated UUID 
-//					match.addString(f.name(), f.stringValue());
-//				}
-//			});
-//		List<Document> matches = this.documentIndex.exactMatches(match);
-		List<Document> matches = this.documentIndex.exactMatches(document);
+		List<Document> matches = this.documentIndex.exactMatches(document,ID_FIELD);
 		if (matches.size() == 0) {
 			if (logger.isDebugEnabled()) {
 				logger.debug("Doc dosent exist attempting write.");
 			}
-//			String uuid = UUID.randomUUID().toString();
-//			document.addString(ID_FIELD, uuid);
+			String uuid = UUID.randomUUID().toString();
+			document.addString(ID_FIELD, uuid);
 //			StringBuilder fields = new StringBuilder();
 //			document.getFields().stream().forEach(f -> {fields.append(f);});
 //			this.writeKV(fields.toString(),uuid);

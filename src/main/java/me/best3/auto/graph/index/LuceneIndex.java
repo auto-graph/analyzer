@@ -97,7 +97,7 @@ public abstract class LuceneIndex implements AutoCloseable{
 	}
 
 	private void collectExactMatches(me.best3.auto.graph.index.Document match, IndexSearcher searcher, 
-			TopDocs topDocs, List<me.best3.auto.graph.index.Document> results) {
+			TopDocs topDocs, List<me.best3.auto.graph.index.Document> results, String...excludeField) {
 		results.addAll(Arrays.asList(topDocs.scoreDocs).parallelStream()
 				.map(scoreDoc -> {
 			try {
@@ -107,7 +107,18 @@ public abstract class LuceneIndex implements AutoCloseable{
 			}
 			return new me.best3.auto.graph.index.Document();
 		})
-				.filter(d -> {return match.getFields().size()== d.getFields().size();}) // there are exactly the same fields we want no more or less
+				.filter(d -> {
+					List<String> resultFields = d.getFields();
+					boolean excludeFieldMismatch = false;
+					for(String field : resultFields) {
+						if(!resultFields.contains(field)) {
+							excludeFieldMismatch = true;
+							break;
+						}
+					}
+					return !excludeFieldMismatch && //all fields we excluded should be present
+							match.getFields().size() == resultFields.size()-excludeField.length; // the only length difference should the excluded fields
+					}) // there are exactly the same fields we want no more or less
 				.collect(java.util.stream.Collectors.toList()));
 	}
 	
@@ -206,16 +217,16 @@ public abstract class LuceneIndex implements AutoCloseable{
 		}
 	}
 
-	public List<me.best3.auto.graph.index.Document> exactMatches(me.best3.auto.graph.index.Document match) throws IOException {
+	public List<me.best3.auto.graph.index.Document> exactMatches(me.best3.auto.graph.index.Document match,String...excludeField) throws IOException {
 		SearcherManager searcherManager = getSearcherManager();
 		IndexSearcher searcher = searcherManager.acquire();
 		List<me.best3.auto.graph.index.Document> results = new ArrayList<me.best3.auto.graph.index.Document>();
 		try {
-			TopDocs topDocs = search(match, DOC_LIMIT);
-			collectExactMatches(match, searcher, topDocs, results);
+			TopDocs topDocs = search(match, DOC_LIMIT,excludeField);
+			collectExactMatches(match, searcher, topDocs, results, excludeField);
 			while(topDocs.scoreDocs.length>=DOC_LIMIT) {
-				topDocs = search(topDocs.scoreDocs[topDocs.scoreDocs.length-1], match.getAllFieldsMatchQuery(), DOC_LIMIT);
-				collectExactMatches(match, searcher, topDocs, results);
+				topDocs = search(topDocs.scoreDocs[topDocs.scoreDocs.length-1], match.getAllFieldsMatchQuery(Arrays.asList(excludeField)), DOC_LIMIT);
+				collectExactMatches(match, searcher, topDocs, results, excludeField);
 			}
 		}finally {
 			searcherManager.release(searcher);
@@ -230,9 +241,9 @@ public abstract class LuceneIndex implements AutoCloseable{
 	 * @param match
 	 * @return
 	 */
-	public boolean exists(me.best3.auto.graph.index.Document match) {
+	public boolean exists(me.best3.auto.graph.index.Document match,String...excludeField) {
 		try {
-			boolean existanceCheck = (findFirst(match)!=null);
+			boolean existanceCheck = (findFirst(match,excludeField)!=null);
 			if(logger.isDebugEnabled()) {
 				logger.debug(String.format("existence check returned %s",existanceCheck) );
 			}
@@ -243,15 +254,15 @@ public abstract class LuceneIndex implements AutoCloseable{
 		}
 	}
 
-	public List<me.best3.auto.graph.index.Document> find(me.best3.auto.graph.index.Document match) throws IOException{
+	public List<me.best3.auto.graph.index.Document> find(me.best3.auto.graph.index.Document match,String...excludeField) throws IOException{
 		SearcherManager searcherManager = getSearcherManager();
 		IndexSearcher searcher = searcherManager.acquire();
 		List<me.best3.auto.graph.index.Document> results = new ArrayList<me.best3.auto.graph.index.Document>();
 		try {
-			TopDocs topDocs = search(match, DOC_LIMIT);
+			TopDocs topDocs = search(match, DOC_LIMIT,excludeField);
 			collectResults(searcher, topDocs, results);
 			while(topDocs.scoreDocs.length>=DOC_LIMIT) {
-				topDocs = search(topDocs.scoreDocs[topDocs.scoreDocs.length-1], match.getAllFieldsMatchQuery(), DOC_LIMIT);
+				topDocs = search(topDocs.scoreDocs[topDocs.scoreDocs.length-1], match.getAllFieldsMatchQuery(Arrays.asList(excludeField)), DOC_LIMIT);
 				collectResults(searcher, topDocs, results);
 			}
 		}finally {
@@ -260,11 +271,11 @@ public abstract class LuceneIndex implements AutoCloseable{
 		return results;
 	}	
 
-	public me.best3.auto.graph.index.Document findFirst(me.best3.auto.graph.index.Document match) throws IOException {
+	public me.best3.auto.graph.index.Document findFirst(me.best3.auto.graph.index.Document match,String...excludeField) throws IOException {
 		if(logger.isDebugEnabled()) {
 			logger.debug("find first using document : " + match.toJSON());
 		}
-		TopDocs topDocs = search(match,1);
+		TopDocs topDocs = search(match,1,excludeField);
 		if(logger.isDebugEnabled()) {
 			logger.debug("topDocs count : " + topDocs.totalHits.value);
 		}
@@ -395,9 +406,9 @@ public abstract class LuceneIndex implements AutoCloseable{
 		timer.scheduleAtFixedRate(timerTask, 0, getReaderRefreshTime());
 	}
 	
-	public TopDocs search(me.best3.auto.graph.index.Document match, int topN) throws IOException {
+	public TopDocs search(me.best3.auto.graph.index.Document match, int topN,String...excludeField) throws IOException {
 		if(match!=null && topN>0) {
-			Query query = match.getAllFieldsMatchQuery();
+			Query query = match.getAllFieldsMatchQuery(Arrays.asList(excludeField));
 			if(query!=null) {//not a possible scenario just being defensive
 				return search(query, topN);
 			}
