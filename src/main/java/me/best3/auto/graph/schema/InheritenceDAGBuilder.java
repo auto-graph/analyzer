@@ -19,8 +19,8 @@ import me.best3.auto.graph.analyzer.SubsetComparator;
 import me.best3.auto.graph.index.Document;
 import me.best3.auto.graph.index.LocalFileSystemIndexer;
 
-public class Builder {
-	private static final Logger logger = LogManager.getLogger(Builder.class);
+public class InheritenceDAGBuilder {
+	private static final Logger logger = LogManager.getLogger(InheritenceDAGBuilder.class);
 	private static final String DOCINDEX = "./subsetcomp";
 	private static LocalFileSystemIndexer localFSIndexer;
 
@@ -50,17 +50,16 @@ public class Builder {
 			//build the graph
 			buildSubsetToSupersetGraph(graph);
 			
-			
-			
 			//perform a topological sort of this DAG
 			Document[] sortedVertices = performTopologicalSort(graph); 
 
 			AllDirectedPaths<Document, DefaultEdge> directPaths = new AllDirectedPaths<>(graph);
 			
+			//clone edge set for marking of processed edges
 			Set<DefaultEdge> edgeSet = new HashSet<>();
 			edgeSet.addAll(graph.edgeSet());// make a copy so we can modify safely
+
 			int i = 0;
-			
 			while (i < sortedVertices.length) {
 				Document baseVertex = sortedVertices[i];
 				int k = i + 1;

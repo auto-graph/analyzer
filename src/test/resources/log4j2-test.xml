@@ -31,6 +31,9 @@
     </Logger>
 	<Logger name="me.best3.auto.graph.analyzer.SubsetComparator" level="INFO">
     	<AppenderRef ref="Console"/>
+    </Logger>
+	<Logger name="me.best3.auto.graph.schema.BuildGraph" level="INFO">
+    	<AppenderRef ref="Console"/>
     </Logger> 
     
     

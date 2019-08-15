@@ -108,12 +108,6 @@ public class Document implements Iterable<IndexableField> {
 	public String toJSON() throws IOException {
 		return new ObjectMapper().writeValueAsString(document);
 	}
-
-	public String docName() {
-		return getFields().stream().map(f -> {
-			return f.replace("field", "");
-		}).collect(Collectors.joining());
-	}
 	
 	public String[] getExcludeFields() {
 		return new String[] {};

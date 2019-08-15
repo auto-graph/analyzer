@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.stream.Collectors;
 
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DirectedAcyclicGraph;
@@ -22,15 +23,21 @@ public class BuilderTest extends SubsetComparatorTest{
 	@Test
 	public void schemaBuilderTest() {
 		
-		Builder builder = new Builder();
+		InheritenceDAGBuilder builder = new InheritenceDAGBuilder();
 		ComponentNameProvider<Document> vertexIDProvider = (d) -> {
 			return String.valueOf(d.get(DocumentWithID.ID_FIELD).hashCode());
+		};
+		
+		ComponentNameProvider<Document> vertexLabelProvider = (d) ->{
+			return d.getFields().stream().map(f -> {
+				return f.replace("field", "");
+			}).collect(Collectors.joining());
 		};
 
 		DirectedAcyclicGraph<Document, DefaultEdge> graph = builder.deduceSchema(SubsetComparatorTest.TEST_JSON_FILE);
 		 
 		 try {
-			new DOTExporter<Document, DefaultEdge>(vertexIDProvider, Document::docName, null).exportGraph(graph,
+			new DOTExporter<Document, DefaultEdge>(vertexIDProvider, vertexLabelProvider, null).exportGraph(graph,
 						Files.newOutputStream(Paths.get("./", "graph.gv"), StandardOpenOption.CREATE));
 		} catch (ExportException | IOException e) {
 			e.printStackTrace();

@@ -1,6 +1,5 @@
 package me.best3.auto.graph.schema;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -40,7 +39,6 @@ public class BuildGraph implements Consumer<Document> {
 	@Override
 	public void accept(Document doc) {
 		if (DEBUG_ENABLED) {
-			logger.debug(doc.docName());
 			logger.debug(String.format("before : graph edge set size  : %d", graph.edgeSet().size()));
 		}
 		List<VisitableDocument<DocumentWithID>> supersets = findAllSupersetsOf(doc);
@@ -68,16 +66,7 @@ public class BuildGraph implements Consumer<Document> {
 	}
 
 	private void addEdge(VisitableDocument<DocumentWithID> superset, Document subset) {
-		if (DEBUG_ENABLED) {
-			logger.debug(String.format("Creating edge between %s --> %s", subset.docName(),
-					superset.getWrappedDocument().docName()));
-		}
-		graph.addEdge(subset, superset.getWrappedDocument());
-		System.out.println(String.format("----------ancestors of %s ---------",superset.getWrappedDocument().docName()));
-		graph.getAncestors(superset.getWrappedDocument()).stream().forEach(d -> {
-			System.out.println(d.docName());
-		});
-		System.out.println("--------------------------------------------");
+		graph.addEdge(subset, superset.getWrappedDocument());		
 	}
 
 }
