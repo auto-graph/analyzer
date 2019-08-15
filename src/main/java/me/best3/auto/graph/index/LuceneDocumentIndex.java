@@ -25,5 +25,12 @@ public class LuceneDocumentIndex extends LuceneIndex {
 		}
 		getIndexWriter().addDocument(document.getDocument());
 	}
+
+	
+	@Override
+	protected Document getDocumentInstance(org.apache.lucene.document.Document doc) {
+		return new DocumentWithID(doc);
+	}
+	
 	
 }

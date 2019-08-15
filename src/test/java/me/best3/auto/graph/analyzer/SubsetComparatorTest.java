@@ -15,7 +15,7 @@ public class SubsetComparatorTest {
 	private static final String DOCINDEX = "./subsetcomp";
 	private static final String SUBSET_COMPARATOR_TEST_JSON = "SubsetComparatorTest.json";
 	private static LocalFileSystemIndexer localFSIndexer;
-	private static String testJsonFile = FileIndexerTest.class.getClassLoader().getResource(SUBSET_COMPARATOR_TEST_JSON).getFile();
+	protected static String TEST_JSON_FILE = FileIndexerTest.class.getClassLoader().getResource(SUBSET_COMPARATOR_TEST_JSON).getFile();
 	
 	@BeforeAll
 	public static void setup() {
@@ -39,7 +39,7 @@ public class SubsetComparatorTest {
 
 	@Test
 	public void processTokens() throws IOException, InterruptedException {
-		localFSIndexer.processJSONFile(testJsonFile);
+		localFSIndexer.processJSONFile(TEST_JSON_FILE);
 		SubsetComparator subsetComparator = new SubsetComparator();
 		List<Document> documents = localFSIndexer.getAllDocuments(subsetComparator);
 		documents.forEach(d -> {

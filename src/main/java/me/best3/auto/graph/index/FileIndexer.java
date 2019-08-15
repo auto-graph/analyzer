@@ -105,7 +105,7 @@ public abstract class FileIndexer implements AutoCloseable{
 	 * @throws IOException
 	 */
 	private void processObject(JsonParser jsonParser) throws IOException {
-		Document document = new Document();
+		Document document = getDocumentInstance();
 		Stream.generate(getTokenSupplier(jsonParser))
 		.takeWhile(t -> (t != null && !t.equals(JsonToken.END_OBJECT)) )
 		.forEach(t -> processToken(jsonParser,document));
@@ -155,7 +155,18 @@ public abstract class FileIndexer implements AutoCloseable{
 	}
 	
 	//Abstract methods
+	/**
+	 * @param document
+	 * @param excludeField exclude these fields from duplicate check when upserting
+	 * @throws IOException
+	 */
 	public abstract void writeDoc(Document document) throws IOException;
 	public abstract void writeKV(String key, String value) throws IOException;
+	
+	/**
+	 * Return a new instance of document to be populated with Data
+	 * @return
+	 */
+	public abstract Document getDocumentInstance();
 
 }

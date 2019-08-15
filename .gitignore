@@ -6,5 +6,5 @@
 /analyzer.zargo~
 /target/*
 /target/
-
+/subsetcomp
 /target/

@@ -10,7 +10,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class LocalFileSystemIndexer extends FileIndexer {
-	private static final String ID_FIELD = "ID";
 
 	private static final Logger logger = LogManager.getLogger(LocalFileSystemIndexer.class);
 
@@ -64,16 +63,11 @@ public class LocalFileSystemIndexer extends FileIndexer {
 
 	@Override
 	public void writeDoc(Document document) throws IOException {
-		List<Document> matches = this.documentIndex.exactMatches(document,ID_FIELD);
+		List<Document> matches = this.documentIndex.exactMatches(document,document.getExcludeFields());
 		if (matches.size() == 0) {
 			if (logger.isDebugEnabled()) {
 				logger.debug("Doc dosent exist attempting write.");
 			}
-			String uuid = UUID.randomUUID().toString();
-			document.addString(ID_FIELD, uuid);
-//			StringBuilder fields = new StringBuilder();
-//			document.getFields().stream().forEach(f -> {fields.append(f);});
-//			this.writeKV(fields.toString(),uuid);
 			this.documentIndex.write(document);
 		}
 	}
@@ -81,6 +75,12 @@ public class LocalFileSystemIndexer extends FileIndexer {
 	@Override
 	public void writeKV(String key, String value) throws IOException {
 		this.kvIndex.update(key, value);
+	}
+
+	
+	@Override
+	public Document getDocumentInstance() {
+		return new DocumentWithID();
 	}
 
 }

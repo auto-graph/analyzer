@@ -1,6 +1,7 @@
 package me.best3.auto.graph.index;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -82,9 +83,11 @@ public class Document implements Iterable<IndexableField> {
 	}
 	
 	public List<String> getFields(){
+		List<String> excludeFields = Arrays.asList(getExcludeFields());
 		List<String> fields = this.document.getFields()
 				.parallelStream()
 				.map((f) -> { return f.name();})
+				.filter(f -> {return !excludeFields.contains(f);})
 				.collect(Collectors.toList());
 		Collections.sort(fields);
 		return fields;
@@ -105,4 +108,15 @@ public class Document implements Iterable<IndexableField> {
 	public String toJSON() throws IOException {
 		return new ObjectMapper().writeValueAsString(document);
 	}
+
+	public String docName() {
+		return getFields().stream().map(f -> {
+			return f.replace("field", "");
+		}).collect(Collectors.joining());
+	}
+	
+	public String[] getExcludeFields() {
+		return new String[] {};
+	}
+
 }

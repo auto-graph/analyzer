@@ -11,13 +11,10 @@
     </Root>
     
     
-    <!-- <Logger name="me.best3.auto.graph.index.LuceneIndexFactory" level="INFO">
+    <Logger name="me.best3.auto.graph.index.LuceneIndexFactory" level="INFO">
     	<AppenderRef ref="Console"/>
     </Logger>
     <Logger name="me.best3.auto.graph.index.FileIndexer" level="INFO">
-    	<AppenderRef ref="Console"/>
-    </Logger>
-    <Logger name="me.best3.auto.graph.index.LuceneIndex" level="INFO">
     	<AppenderRef ref="Console"/>
     </Logger>
     <Logger name="me.best3.auto.graph.index.LuceneDocumentIndex" level="INFO">
@@ -25,10 +22,16 @@
     </Logger>
     <Logger name="me.best3.auto.graph.index.Document" level="INFO">
     	<AppenderRef ref="Console"/>
-    </Logger> -->
+    </Logger>
+    <Logger name="me.best3.auto.graph.index.LuceneIndex" level="INFO">
+    	<AppenderRef ref="Console"/>
+    </Logger>
      <Logger name="me.best3.auto.graph.index.LuceneKVIndex" level="INFO">
     	<AppenderRef ref="Console"/>
     </Logger>
+	<Logger name="me.best3.auto.graph.analyzer.SubsetComparator" level="INFO">
+    	<AppenderRef ref="Console"/>
+    </Logger> 
     
     
   </Loggers>

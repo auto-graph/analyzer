@@ -365,11 +365,15 @@ public abstract class LuceneIndex implements AutoCloseable{
 		List<me.best3.auto.graph.index.Document> documents = new ArrayList<me.best3.auto.graph.index.Document>();
 		for(int i=0;i<reader.maxDoc();i++) {
 			Document doc = reader.document(i);
-			documents.add(new me.best3.auto.graph.index.Document(doc));
+			documents.add(getDocumentInstance(doc));
 		}
 		return documents;
 	}
 	
+	protected me.best3.auto.graph.index.Document getDocumentInstance(Document doc) {
+		return new me.best3.auto.graph.index.Document(doc);
+	}
+
 	private void internalWrite(String key, String value) throws IOException {
 		logger.debug("Internal write method called");
 		Document doc = new Document();
