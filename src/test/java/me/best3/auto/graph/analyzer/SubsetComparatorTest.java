@@ -1,5 +1,7 @@
 package me.best3.auto.graph.analyzer;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.util.List;
 
@@ -42,13 +44,16 @@ public class SubsetComparatorTest {
 		localFSIndexer.processJSONFile(TEST_JSON_FILE);
 		SubsetComparator subsetComparator = new SubsetComparator();
 		List<Document> documents = localFSIndexer.getAllDocuments(subsetComparator);
-		documents.forEach(d -> {
-			try {
-				System.out.println(d.toJSON());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		});
+//		documents.forEach(d -> {
+//			try {
+//				System.out.println(d.toJSON());
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
+//		});
+		assertEquals(6,documents.size(),"Document count mismatch.");
+		assertEquals(2,documents.get(0).getFields().size(),"First document is expected to have 3 fields Not including the ID field.");
+		assertEquals(7,documents.get(5).getFields().size(),"Last document is expected to have 3 fields Not including the ID field.");
 	}
 
 }

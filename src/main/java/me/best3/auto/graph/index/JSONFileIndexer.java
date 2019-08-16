@@ -19,8 +19,8 @@ import com.fasterxml.jackson.core.JsonToken;
  * This indexer is aware of processing a JSON file and delegating the work of indexing to concrete classes 
  *
  */
-public abstract class FileIndexer implements AutoCloseable{
-	private static final Logger logger = LogManager.getLogger(FileIndexer.class);
+public abstract class JSONFileIndexer implements AutoCloseable{
+	private static final Logger logger = LogManager.getLogger(JSONFileIndexer.class);
 	private JsonFactory jsonFactory = new JsonFactory();
 
 	public abstract void clear();
@@ -74,7 +74,10 @@ public abstract class FileIndexer implements AutoCloseable{
 	private void processField(JsonParser jsonParser, Document document) {
 		logCurrentToken("processField",jsonParser);
 		try {
-			document.addString(jsonParser.currentName(), jsonParser.currentName());
+			String fieldName = jsonParser.currentName().trim();
+			if(fieldName.length()>0) {
+				document.addString(fieldName, fieldName);
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -109,7 +112,9 @@ public abstract class FileIndexer implements AutoCloseable{
 		Stream.generate(getTokenSupplier(jsonParser))
 		.takeWhile(t -> (t != null && !t.equals(JsonToken.END_OBJECT)) )
 		.forEach(t -> processToken(jsonParser,document));
-		this.writeDoc(document);
+		if (document.getFields().size()>0) {//Drop empty objects
+			this.writeDoc(document);
+		}
 	}
 	
 	/**

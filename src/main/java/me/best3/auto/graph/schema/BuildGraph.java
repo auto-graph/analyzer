@@ -66,7 +66,7 @@ public class BuildGraph implements Consumer<Document> {
 	}
 
 	private void addEdge(VisitableDocument<DocumentWithID> superset, Document subset) {
-		graph.addEdge(subset, superset.getWrappedDocument());		
+		graph.addEdge(subset, superset.getWrappedDocument());
 	}
 
 }

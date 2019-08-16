@@ -9,7 +9,7 @@ import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class LocalFileSystemIndexer extends FileIndexer {
+public class LocalFileSystemIndexer extends JSONFileIndexer {
 
 	private static final Logger logger = LogManager.getLogger(LocalFileSystemIndexer.class);
 
