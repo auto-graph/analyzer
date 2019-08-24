@@ -26,6 +26,7 @@ public class LocalFileSystemIndexer extends JSONFileIndexer {
 
 	public void clear() {
 		this.documentIndex.clear();
+		this.kvIndex.clear();
 	}
 
 	@Override

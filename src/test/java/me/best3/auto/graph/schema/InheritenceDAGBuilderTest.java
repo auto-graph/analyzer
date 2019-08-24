@@ -16,14 +16,18 @@ import org.junit.jupiter.api.Test;
 import me.best3.auto.graph.analyzer.SubsetComparatorTest;
 import me.best3.auto.graph.index.Document;
 import me.best3.auto.graph.index.DocumentWithID;
+import me.best3.auto.graph.index.LocalFileSystemIndexer;
 
 public class InheritenceDAGBuilderTest extends SubsetComparatorTest{
+	private static final String DOCINDEX = "./subsetcomp";
 	
 	
 	@Test
-	public void schemaBuilderTest() {
+	public void schemaBuilderTest() throws IOException {
 		
-		InheritenceDAGBuilder builder = new InheritenceDAGBuilder();
+		LocalFileSystemIndexer localFSIndexer = new LocalFileSystemIndexer(DOCINDEX);
+		
+		InheritenceDAGBuilder builder = new InheritenceDAGBuilder(localFSIndexer);
 		
 		ComponentNameProvider<Document> vertexIDProvider = (d) -> {
 			return String.valueOf(d.get(DocumentWithID.ID_FIELD).hashCode());
@@ -39,10 +43,14 @@ public class InheritenceDAGBuilderTest extends SubsetComparatorTest{
 			return name;
 		};
 
-		DirectedAcyclicGraph<Document, DefaultEdge> graph = builder.deduceSchema(
+		builder.deduceSchema(
 				//SubsetComparatorTest.TEST_JSON_FILE
-				"C:\\temp\\nys-environmental-remediation-sites\\socrata_metadata.json"
+				"C:\\temp\\airquality.json"
 				);
+		
+		builder.removeNonMinimalSubsetEdges();
+		
+		DirectedAcyclicGraph<Document, DefaultEdge> graph = builder.getGraph();
 		 
 		 try {
 			new DOTExporter<Document, DefaultEdge>(vertexIDProvider, vertexLabelProvider, null).exportGraph(graph,

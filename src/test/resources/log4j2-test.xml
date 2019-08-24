@@ -11,7 +11,7 @@
     </Root>
     
     
-    <!-- <Logger name="me.best3.auto.graph.index.LuceneIndexFactory" level="INFO">
+    <Logger name="me.best3.auto.graph.index.LuceneIndexFactory" level="INFO">
     	<AppenderRef ref="Console"/>
     </Logger>
     <Logger name="me.best3.auto.graph.index.FileIndexer" level="INFO">
@@ -34,8 +34,13 @@
     </Logger>
 	<Logger name="me.best3.auto.graph.schema.BuildGraph" level="INFO">
     	<AppenderRef ref="Console"/>
-    </Logger>  -->
-    
+    </Logger> 
+    <Logger name="me.best3.auto.graph.index.JSONFileIndexer" level="INFO">
+    	<AppenderRef ref="Console"/>
+    </Logger>
+    <Logger name="me.best3.auto.graph.index.LocalFileSystemIndexer" level="INFO">
+    	<AppenderRef ref="Console"/>
+    </Logger>
     
   </Loggers>
 </Configuration>

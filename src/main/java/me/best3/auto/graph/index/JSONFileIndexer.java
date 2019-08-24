@@ -88,6 +88,12 @@ public abstract class JSONFileIndexer implements AutoCloseable{
 	 * @param fileName
 	 */
 	public void processJSONFile(String fileName) {
+		long parseStartTime = 0;
+		long parseEndTime = 0;
+		if(logger.isDebugEnabled()) {
+			parseStartTime = System.currentTimeMillis();
+		}
+		
 		try(JsonParser jsonParser = jsonFactory.createParser(new File(fileName))) {
 			Stream.generate(getTokenSupplier(jsonParser))
 			.takeWhile(t -> t != null)
@@ -96,6 +102,11 @@ public abstract class JSONFileIndexer implements AutoCloseable{
 			.forEach(t ->processToken(jsonParser));
 		} catch (IOException e) {
 			logger.debug(e,e);
+		}
+		
+		if(logger.isDebugEnabled()) {
+			parseEndTime = System.currentTimeMillis();
+			logger.debug(String.format("Time to parse file is %d", (parseEndTime-parseStartTime)));
 		}
 	}
 	

@@ -12,3 +12,4 @@ Analyze the data to determine graph schema
 3.  Drop empty objects ==> _FIXED_
 4.  Drop edge creation for null sets as they are subset of all set (probably causing cycles)
 5.  Clear the index before using it to eliminate any data from previous run ==> _FIXED_
+6.  Multi-threading for speed
